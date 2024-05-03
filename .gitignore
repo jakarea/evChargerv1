@@ -1,0 +1,69 @@
+# macOS
+.DS_Store
+
+# Flutter/Dart specific
+**/build/
+**/ios/Pods/
+**/ios/.symlinks/
+.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.idea/
+**/android/.gradle/
+**/android/build/
+**/android/gradle/
+**/android/local.properties
+**/android/.idea/
+**/*.iml
+**/android/app/secrets.properties
+**/android/key.properties
+**/android/app/key.jks
+**/android/key.jks
+
+# Android
+**/android/.gradle
+**/android/.idea
+**/android/build
+**/android/gradle
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+
+# iOS
+**/ios/Pods
+**/ios/Podfile.lock
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/.generated/
+**/ios/.symlinks/
+**/ios/Flutter/App.framework
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Flutter.framework
+
+# Web
+**/web/.dart_tool/
+**/web/packages/
+
+# Visual Studio Code
+.vscode/
+
+# Android Studio
+.idea/
+*.iml
+.dart_tool/package_config.json
+.dart_tool/package_config_subset
+.dart_tool/version
+.flutter-plugins
+pubspec.lock
+pubspec.yaml
+
+.dart_tool/package_config.json
+.dart_tool/package_config_subset
+.dart_tool/version
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/package_config.json
+.flutter-plugins-dependencies

@@ -1,0 +1,867 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:ev_charger/controllers/session_controller.dart';
+import 'package:ev_charger/models/active_session_model.dart';
+import 'package:ev_charger/models/card_view_model.dart';
+import 'package:ev_charger/models/chargers_view_model.dart';
+import 'package:flutter/material.dart';
+import 'database_helper.dart';
+import 'package:get/get.dart';
+import 'package:ev_charger/services/smtp_service.dart';
+import 'package:intl/intl.dart';
+import 'dart:math';
+import 'dart:io';
+import 'package:connectivity/connectivity.dart';
+import 'package:http/http.dart' as http;
+
+class BackgroundService {
+  static final BackgroundService _instance = BackgroundService._internal();
+
+  late List<WebSocket?> _sockets;
+  List<String> chargerState = List.filled(100, '');
+  List<String> chargerLastState = List.filled(100, '');
+  var timeZone = 'UTC+02:00';
+  int counter = 1;
+  int randomNumber = 2;
+  int repeat = 0;
+  int meterInterval = 60;
+  List<int> nextSession = List.filled(900, 0);
+  List<String> cardUId = List.filled(900, '');
+  List<String> minIntervalBeforeReuse = List.filled(900, '');
+  List<int> numberOfCharge = List.filled(900, 0);
+  List<int> numberOfChargeDays = List.filled(900, 0);
+  List<String> responseStatus = List.filled(900, '');
+  List<int> cardId = List.filled(900, 0);
+  List<int> messageId = List.filled(900, 1);
+  List<int> meterValueCounter = List.filled(900, 0);
+  List<int> randomTime = List.filled(900, 0);
+  List<int> sessionEndTime = List.filled(900, 0);
+  List<Map<dynamic, dynamic>> transactionArray = List.generate(900, (_) => {});
+  List<bool> internetDisconnected = List.filled(900, false);
+  List<int> intervalTime = List.filled(900, 0);
+  List<double> randomKw = List.filled(900, 0);
+  List<double> wPerSec = List.filled(900, 0);
+  int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  List<int> transactionId = List.filled(900, 0);
+  List<double> beginMeterValue = List.filled(900, 0);
+  List<int> lastNotificationTime = List.filled(900, 0);
+  List<int> lastNotificationTimeDiff = List.filled(900, 0);
+  List<double> lastMeterValue = List.filled(900, 0);
+  List<double> sumKwh = List.filled(900, 0);
+  int force = 0;
+  Map<String, dynamic>? forceCardData;
+  Map<String, dynamic>? forceChargerr;
+  List<String> startTime = List.filled(900,
+      DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(DateTime.now()).toString());
+  static const Duration delayDuration = Duration(seconds: 2);
+
+  factory BackgroundService() {
+    return _instance;
+  }
+
+  BackgroundService._internal() {
+    startPeriodicTask();
+    _sockets = List.filled(100, null);
+  }
+
+  void stopChargingImmediately(chargerId) async {
+    DateTime utcNow = DateTime.now().toUtc();
+    String sign = timeZone.substring(3, 4);
+    int hours = int.parse(timeZone.substring(4, 6));
+    int minutes = int.parse(timeZone.substring(7));
+    int totalOffsetMinutes = (hours * 60 + minutes);
+    DateTime now = utcNow.add(Duration(
+        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+    sessionEndTime[chargerId] = (now.millisecondsSinceEpoch ~/ 1000) - 4500;
+    await DatabaseHelper.instance.updateTime(chargerId, 5);
+  }
+
+  Future<bool> checkInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse('https://www.google.com'));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void startChargingImmediately(int chargerId, int cardId) async {
+    force = 1;
+    forceChargerr = await DatabaseHelper.instance.getChargerById(chargerId);
+    forceCardData = await DatabaseHelper.instance.getCardById(cardId);
+    ChargersViewModel charger = ChargersViewModel.fromJson(forceChargerr!);
+    chargerState[charger.id!] = 'heartbeat';
+    await DatabaseHelper.instance.updateTime(chargerId, 5);
+  }
+
+  int getRandomNumber() {
+    return 0;
+  }
+
+  int getRandomSessionRestTime(int numberOfSeaaion, int days, int lastSession) {
+    if (lastSession < 12000) {
+      lastSession = 12000;
+    }
+
+    int totalTime = 86400 * days;
+
+    int averageUse = totalTime ~/ numberOfSeaaion;
+
+    Random random = Random();
+    int halfOfAverageUse = averageUse ~/ 2;
+    int thirdOfAverageUse = averageUse ~/ 3;
+    int randomNumber =
+        random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
+    int nextSession = randomNumber.abs() + lastSession * 3;
+    DateTime utcNow = DateTime.now().toUtc();
+    String sign = timeZone.substring(3, 4);
+    int hours = int.parse(timeZone.substring(4, 6));
+    int minutes = int.parse(timeZone.substring(7));
+    int totalOffsetMinutes = (hours * 60 + minutes);
+    DateTime now = utcNow.add(Duration(
+        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+  }
+
+  void startPeriodicTask() async {
+    int time = 0;
+    timeZone = await DatabaseHelper.instance.getUtcTime();
+    bool isConnected = true;
+    Timer.periodic(const Duration(seconds: 15), (Timer t) async {
+      time++;
+
+      DateTime utcNow = DateTime.now().toUtc();
+
+      String sign = timeZone.substring(3, 4);
+      int hours = int.parse(timeZone.substring(4, 6));
+      int minutes = int.parse(timeZone.substring(7));
+      int totalOffsetMinutes = (hours * 60 + minutes);
+      DateTime now = utcNow.add(Duration(
+          minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+      if (time >= 5) {
+        isConnected = await checkInternetConnection();
+        time = 0;
+        timeZone = await DatabaseHelper.instance.getUtcTime();
+      }
+
+      if (isConnected) {
+        await checkAndUpdateDatabase();
+      }
+    });
+  }
+
+  bool isCurrentTimeInRange(String timeRange) {
+    List<String> times = timeRange.split(' - ');
+    String startTimeStr = times[0];
+    String endTimeStr = times[1];
+
+    List<String> startParts = startTimeStr.split('.');
+    TimeOfDay startTimes = TimeOfDay(
+        hour: int.parse(startParts[0]), minute: int.parse(startParts[1]));
+
+    List<String> endParts = endTimeStr.split('.');
+    TimeOfDay endTime =
+        TimeOfDay(hour: int.parse(endParts[0]), minute: int.parse(endParts[1]));
+
+    final now = TimeOfDay.now();
+
+    double toMinutes(TimeOfDay tod) => tod.hour * 60.0 + tod.minute;
+
+    double nowInMinutes = toMinutes(now);
+    double startInMinutes = toMinutes(startTimes);
+    double endInMinutes = toMinutes(endTime);
+
+    return nowInMinutes >= startInMinutes && nowInMinutes <= endInMinutes;
+  }
+
+  Future<void> sendNewChargerBootNotification(ChargersViewModel charger) async {
+    final SessionController sessionController = Get.find<SessionController>();
+
+    await connectToWebSocket(charger.urlToConnect!, charger.id!)
+        .then((_) {})
+        .catchError((error) {});
+    await sendBootNotification(charger);
+    chargerState[charger.id!] = 'heartbeat';
+  }
+
+  Future<void> checkAndUpdateDatabase() async {
+    Map<String, dynamic>? chargerr =
+        await DatabaseHelper.instance.queryDueChargers();
+
+    final SessionController sessionController = Get.find<SessionController>();
+
+    if (force == 1) {
+      chargerr = forceChargerr;
+    }
+    if (chargerr != null) {
+      ChargersViewModel charger = ChargersViewModel.fromJson(chargerr);
+      String currentState = chargerState[charger.id!];
+      intervalTime[charger.id!] = int.parse(charger.intervalTime!);
+      CardViewModel? card;
+
+      switch (currentState) {
+        case 'heartbeat':
+          await connectToWebSocket(charger.urlToConnect!, charger.id!)
+              .then((_) {})
+              .catchError((error) {});
+
+          await DatabaseHelper.instance
+              .updateChargingStatus(charger.id!, "start");
+
+          Map<String, dynamic>? cardData = await DatabaseHelper.instance
+              .getCardByGroupAndTime(charger.groupId!);
+
+          if (force == 1) {
+            cardData = forceCardData;
+          }
+
+          if (cardData != null) {
+            DateTime utcNow = DateTime.now().toUtc();
+            String sign = timeZone.substring(3, 4);
+            int hours = int.parse(timeZone.substring(4, 6));
+            int minutes = int.parse(timeZone.substring(7));
+            int totalOffsetMinutes = (hours * 60 + minutes);
+            DateTime now = utcNow.add(Duration(
+                minutes:
+                    sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+            CardViewModel card = CardViewModel.fromJson(cardData);
+
+            await DatabaseHelper.instance
+                .updateChargerId(card.id!, charger.id.toString());
+
+            double minKwh = double.parse(card.minKwhPerSession);
+            double maxKwh = double.parse(card.maxKwhPerSession);
+            randomKw[charger.id!] =
+                minKwh + Random().nextDouble() * (maxKwh - minKwh);
+
+            int minSessionTime = int.parse(card.minSessionTime!);
+            int maxSessionTime = int.parse(card.maxSessionTime!);
+
+            randomTime[charger.id!] = minSessionTime +
+                Random().nextInt(maxSessionTime - minSessionTime + 1);
+
+            sessionEndTime[charger.id!] =
+                randomTime[charger.id!] + now.millisecondsSinceEpoch ~/ 1000;
+            wPerSec[charger.id!] = randomKw[charger.id!] / 3.6;
+
+            beginMeterValue[charger.id!] = double.parse(charger.meterValue!);
+
+            sumKwh[charger.id!] = beginMeterValue[charger.id!];
+            cardUId[charger.id!] = card.uid;
+            cardId[charger.id!] = card.id!;
+            minIntervalBeforeReuse[charger.id!] = card.minIntervalBeforeReuse!;
+            numberOfCharge[charger.id!] = int.parse(card.times);
+            numberOfChargeDays[charger.id!] = int.parse(card.daysUntil);
+            force = 0;
+
+            Random random = Random();
+            int min = 10;
+
+            int preparingInterval =
+                min + random.nextInt(meterInterval - min + 1);
+
+            await Future.delayed(Duration(seconds: preparingInterval));
+
+            await sendStatusNotification(charger.id!, "StatusNotification",
+                "Preparing", "", "", "", randomTime[charger.id!], 1);
+
+            await sendStatusNotification(
+                charger.id!,
+                "StatusNotification",
+                "Available",
+                "Card detected",
+                card.uid,
+                "",
+                randomTime[charger.id!],
+                1);
+
+            await sendStatusNotification(charger.id!, "AuthorizeNotification",
+                "Authorize", "", card.uid, "", randomTime[charger.id!], 1);
+            await Future.delayed(delayDuration);
+
+            if (responseStatus[charger.id!] == 'Blocked' ||
+                responseStatus[charger.id!] == 'Invalid') {
+              var uid = card.uid;
+              var chargeBoxSerialNumber = charger.chargeBoxSerialNumber;
+              var cardNumber = card.cardNumber;
+              var msp = card.msp;
+              SmtpService.sendEmail(
+                  subject: 'Card Blocked',
+                  text: "$uid has blocked!",
+                  headerText: "BoxSerialNumber: $chargeBoxSerialNumber",
+                  contentText: "MSP: $msp <br> Card Number: $cardNumber");
+
+              nextSession[charger.id!] = await getRandomSessionRestTime(
+                  numberOfCharge[charger.id!],
+                  numberOfChargeDays[charger.id!],
+                  randomTime[charger.id!]);
+
+              await DatabaseHelper.instance.updateTimeField(
+                  cardId[charger.id!], nextSession[charger.id!]);
+              await DatabaseHelper.instance.updateChargerId(card.id!, '');
+
+              await sendStatusNotification(charger.id!, "StatusNotification",
+                  "Available", "", "", "", 0, 1);
+
+              await sendHeartbeat(charger.id!, intervalTime[charger.id!]);
+              chargerState[charger.id!] = 'heartbeat';
+            } else {
+              nextSession[charger.id!] = getRandomSessionRestTime(
+                  numberOfCharge[charger.id!],
+                  numberOfChargeDays[charger.id!],
+                  randomTime[charger.id!]);
+              await DatabaseHelper.instance.updateTimeField(
+                  cardId[charger.id!], nextSession[charger.id!]);
+              await sendStatusNotification(charger.id!, "SuspendedEV", "", "",
+                  "", "", randomTime[charger.id!], 1);
+
+              await DatabaseHelper.instance
+                  .updateChargingStatus(charger.id!, "Charging");
+              await DatabaseHelper.instance
+                  .updateChargerStatus(charger.id!, "1");
+
+              final SessionController sessionController =
+                  Get.find<SessionController>();
+
+              await startTransaction(
+                  charger.id!, card.uid, beginMeterValue[charger.id!]);
+              await Future.delayed(delayDuration);
+
+              DateTime utcNow = DateTime.now().toUtc();
+              String sign = timeZone.substring(3, 4);
+              int hours = int.parse(timeZone.substring(4, 6));
+              int minutes = int.parse(timeZone.substring(7));
+              int totalOffsetMinutes = (hours * 60 + minutes);
+              DateTime now = utcNow.add(Duration(
+                  minutes:
+                      sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+              String timestamp =
+                  DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+              DatabaseHelper.instance.insertOrUpdateActiveSession(
+                  chargerId: charger.id!,
+                  cardId: card.id!,
+                  transactionStartTime: now.millisecondsSinceEpoch ~/ 1000,
+                  kwh: randomKw[charger.id!].toString(),
+                  sessionTime: randomTime[charger.id!].toString());
+
+              sessionController.addSession(ActiveSessionModel(
+                  cardId: card.id.toString(),
+                  chargerId: charger.id.toString(),
+                  chargerName: charger.chargePointVendor!,
+                  chargerModel: charger.chargePointModel!,
+                  serialBox: charger.chargeBoxSerialNumber!,
+                  cardNumber: card.cardNumber,
+                  msp: card.msp,
+                  uid: card.uid,
+                  transactionSession:
+                      (now.millisecondsSinceEpoch ~/ 1000).toString(),
+                  kwh: randomKw[charger.id!].toString(),
+                  sessionTime: randomTime[charger.id!].toString()));
+
+              await sendMeterValues(charger.id!, {
+                "timestamp": "${timestamp}",
+                "sampledValue": [
+                  {
+                    "value":
+                        "${(sumKwh[charger.id!] / 1000).toStringAsFixed(3)}",
+                    "context": "Transaction.Begin",
+                    "unit": "kWh"
+                  }
+                ]
+              });
+
+              await Future.delayed(delayDuration);
+
+              utcNow = DateTime.now().toUtc();
+              sign = timeZone.substring(3, 4);
+              hours = int.parse(timeZone.substring(4, 6));
+              minutes = int.parse(timeZone.substring(7));
+              totalOffsetMinutes = (hours * 60 + minutes);
+              now = utcNow.add(Duration(
+                  minutes:
+                      sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+              timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+              await sendMeterValues(charger.id!, {
+                "timestamp": "${timestamp}",
+                "sampledValue": [
+                  {
+                    "value":
+                        "${(sumKwh[charger.id!] / 1000).toStringAsFixed(3)}",
+                    "context": "Sample.Periodic",
+                    "measurand": "Energy.Active.Import.Register",
+                    "location": "Outlet",
+                    "unit": "kWh"
+                  }
+                ]
+              });
+
+              DatabaseHelper.instance.logNotification(
+                  messageId: messageId[charger.id!],
+                  chargerId: charger.id!,
+                  uid: cardUId[charger.id!],
+                  transactionId: transactionId[charger.id!],
+                  meterValue: sumKwh[charger.id!],
+                  beginMeterValue: beginMeterValue[charger.id!],
+                  startTime: startTime[charger.id!],
+                  status: "charging",
+                  numberOfCharge: numberOfCharge[charger.id!],
+                  numberOfChargeDays: numberOfChargeDays[charger.id!]);
+
+              await sendStatusNotification(charger.id!, "StatusNotification",
+                  "Charging", "", "", "", randomTime[charger.id!], 1);
+              chargerState[charger.id!] = 'charging';
+              lastNotificationTime[charger.id!] =
+                  now.millisecondsSinceEpoch ~/ 1000;
+              intervalTime[charger.id!] = meterInterval;
+            }
+          } else {
+            await sendHeartbeat(charger.id!, 300);
+          }
+          break;
+
+        case 'charging':
+          await connectToWebSocket(charger.urlToConnect!, charger.id!)
+              .then((_) {})
+              .catchError((error) {});
+          intervalTime[charger.id!] = meterInterval;
+          DateTime utcNow = DateTime.now().toUtc();
+          String sign = timeZone.substring(3, 4);
+          int hours = int.parse(timeZone.substring(4, 6));
+          int minutes = int.parse(timeZone.substring(7));
+          int totalOffsetMinutes = (hours * 60 + minutes);
+          DateTime now = utcNow.add(Duration(
+              minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+          if (sessionEndTime[charger.id!] >=
+              (now.millisecondsSinceEpoch ~/ 1000)) {
+            DateTime utcNow = DateTime.now().toUtc();
+            String sign = timeZone.substring(3, 4);
+            int hours = int.parse(timeZone.substring(4, 6));
+            int minutes = int.parse(timeZone.substring(7));
+            int totalOffsetMinutes = (hours * 60 + minutes);
+            DateTime now = utcNow.add(Duration(
+                minutes:
+                    sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+            nowTime = now.millisecondsSinceEpoch ~/ 1000;
+            lastNotificationTimeDiff[charger.id!] =
+                nowTime - lastNotificationTime[charger.id!];
+            if (lastNotificationTimeDiff[charger.id!] >= meterInterval * 2) {
+              await connectToWebSocket(charger.urlToConnect!, charger.id!)
+                  .then((_) {
+                stopChargingImmediately(charger.id!);
+              }).catchError((error) {});
+            }
+            sumKwh[charger.id!] = sumKwh[charger.id!] +
+                (lastNotificationTimeDiff[charger.id!] * wPerSec[charger.id!]);
+
+            utcNow = DateTime.now().toUtc();
+            sign = timeZone.substring(3, 4);
+            hours = int.parse(timeZone.substring(4, 6));
+            minutes = int.parse(timeZone.substring(7));
+            totalOffsetMinutes = (hours * 60 + minutes);
+            now = utcNow.add(Duration(
+                minutes:
+                    sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+            String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+            await sendMeterValues(charger.id!, {
+              "timestamp": "${timestamp}",
+              "sampledValue": [
+                {
+                  "value": "${(sumKwh[charger.id!] / 1000).toStringAsFixed(3)}",
+                  "context": "Sample.Periodic",
+                  "measurand": "Energy.Active.Import.Register",
+                  "location": "Outlet",
+                  "unit": "kWh"
+                }
+              ]
+            });
+            lastNotificationTime[charger.id!] =
+                now.millisecondsSinceEpoch ~/ 1000;
+            await DatabaseHelper.instance
+                .updateBeginMeterValue(charger.id!, sumKwh[charger.id!]);
+
+            DatabaseHelper.instance.logNotification(
+                messageId: messageId[charger.id!],
+                chargerId: charger.id!,
+                uid: cardUId[charger.id!],
+                transactionId: transactionId[charger.id!],
+                meterValue: sumKwh[charger.id!],
+                beginMeterValue: beginMeterValue[charger.id!],
+                startTime: startTime[charger.id!],
+                status: "charging",
+                numberOfCharge: numberOfCharge[charger.id!],
+                numberOfChargeDays: numberOfChargeDays[charger.id!]);
+            int interval = intervalTime[charger.id!];
+            if (sessionEndTime[charger.id!] <=
+                (now.millisecondsSinceEpoch ~/ 1000) + interval) {
+              Random random = Random();
+              int min = interval ~/ 5;
+              int max = interval - min;
+              intervalTime[charger.id!] = min + random.nextInt(max - min + 1);
+            }
+          } else {
+            DateTime utcNow = DateTime.now().toUtc();
+            String sign = timeZone.substring(3, 4);
+            int hours = int.parse(timeZone.substring(4, 6));
+            int minutes = int.parse(timeZone.substring(7));
+            int totalOffsetMinutes = (hours * 60 + minutes);
+            DateTime now = utcNow.add(Duration(
+                minutes:
+                    sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+            nowTime = now.millisecondsSinceEpoch ~/ 1000;
+            lastNotificationTimeDiff[charger.id!] =
+                nowTime - lastNotificationTime[charger.id!];
+
+            sumKwh[charger.id!] = sumKwh[charger.id!] +
+                (lastNotificationTimeDiff[charger.id!] * wPerSec[charger.id!]);
+            await sendStatusNotification(charger.id!, "SuspendedEV", "", "", "",
+                "", randomTime[charger.id!], 1);
+            await DatabaseHelper.instance.deleteNotificationLog(charger.id!);
+
+            nowTime = now.millisecondsSinceEpoch ~/ 1000;
+
+            String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+
+            await sendMeterValues(charger.id!, {
+              "timestamp": "${timestamp}",
+              "sampledValue": [
+                {
+                  "value": "${(sumKwh[charger.id!] / 1000).toStringAsFixed(3)}",
+                  "context": "Sample.Periodic",
+                  "measurand": "Energy.Active.Import.Register",
+                  "location": "Outlet",
+                  "unit": "kWh"
+                }
+              ]
+            });
+            await sendStatusNotification(charger.id!, "StatusNotification",
+                "Finishing", "", "", "", randomTime[charger.id!], 1);
+
+            timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+            await sendMeterValues(charger.id!, {
+              "timestamp": "${timestamp}",
+              "sampledValue": [
+                {
+                  "value": "${(sumKwh[charger.id!] / 1000).toStringAsFixed(3)}",
+                  "context": "Transaction.End",
+                  "measurand": "Energy.Active.Import.Register",
+                  "location": "Outlet",
+                  "unit": "kWh"
+                }
+              ]
+            });
+            await DatabaseHelper.instance
+                .updateChargingStatus(charger.id!, "N/A");
+            await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
+
+            await stopTransaction(charger.id!, beginMeterValue[charger.id!],
+                sumKwh[charger.id!], cardUId[charger.id!]);
+            await DatabaseHelper.instance
+                .deleteActiveSessionByChargerId(charger.id!);
+
+            await DatabaseHelper.instance
+                .updateBeginMeterValue(charger.id!, sumKwh[charger.id!]);
+            sessionController.removeSessionByChargerId(charger.id.toString());
+            await DatabaseHelper.instance
+                .updateChargerId(cardId[charger.id!], "");
+            await DatabaseHelper.instance.removeChargerId(charger.id!, "");
+
+            await sendStatusNotification(charger.id!, "StatusNotification",
+                "Available", "", "", "", 0, 0);
+
+            await Future.delayed(delayDuration);
+
+            await sendStatusNotification(charger.id!, "StatusNotification",
+                "Available", "", "", "", 0, 1);
+
+            chargerState[charger.id!] = 'heartbeat';
+          }
+
+          break;
+        default:
+          await connectToWebSocket(charger.urlToConnect!, charger.id!)
+              .then((_) {})
+              .catchError((error) {});
+
+          await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
+          await sendBootNotification(charger);
+      }
+
+      int interval = intervalTime[charger.id!];
+
+      if (chargerState[charger.id!] == 'available') {
+        interval = 3;
+      }
+      await DatabaseHelper.instance.updateTime(charger.id!, interval);
+    }
+  }
+
+  Future<void> connectToWebSocket(String url, int chargerId) async {
+    try {
+      _sockets[chargerId] = await WebSocket.connect(
+        url,
+        protocols: ['ocpp1.6', 'ocpp1.5'],
+      );
+
+      final SessionController sessionController = Get.find<SessionController>();
+
+      _sockets[chargerId]!.listen(
+        (data) async {
+          dynamic decodedData = jsonDecode(data);
+          if (decodedData[0] != 3) {
+            await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
+          }
+
+          if (decodedData is List && decodedData.length >= 3) {
+            if (decodedData[2] is Map &&
+                decodedData[2].containsKey('transactionId')) {
+              transactionId[chargerId] = decodedData[2]['transactionId'];
+            }
+
+            String status = '';
+
+            if (decodedData[2] is Map &&
+                decodedData[2].containsKey('idTagInfo') &&
+                decodedData[2]['idTagInfo'] is Map &&
+                decodedData[2]['idTagInfo'].containsKey('status')) {
+              status = decodedData[2]['idTagInfo']['status'];
+              responseStatus[chargerId] = status;
+            }
+          }
+        },
+        onDone: () {},
+        onError: (error) async {},
+      );
+    } catch (e) {}
+  }
+
+  Future<void> sendMessage(String message, int? chargerId) async {
+    if (_sockets[chargerId!] != null) {
+      _sockets[chargerId]!.add(message);
+    } else {
+      await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
+    }
+  }
+
+  Future<void> sendBootNotification(ChargersViewModel charger) async {
+    int? chargerId = charger.id;
+
+    var log = await DatabaseHelper.instance.getNotificationLog("$chargerId");
+    String status;
+
+    if (log == null) {
+      var bootNotification = jsonEncode([
+        2,
+        "${messageId[charger.id!]++}",
+        "BootNotification",
+        {
+          "chargePointVendor": charger.chargePointVendor,
+          "chargePointModel": charger.chargePointModel,
+          "chargePointSerialNumber": charger.chargePointSerialNumber,
+          "chargeBoxSerialNumber": charger.chargeBoxSerialNumber,
+          "firmwareVersion": charger.firmwareVersion
+        }
+      ]);
+
+      await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
+      await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
+      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A");
+      await DatabaseHelper.instance.removeChargerId(charger.id!, "");
+
+      await sendMessage(bootNotification, charger.id);
+
+      await DatabaseHelper.instance
+          .updateTime(charger.id!, int.parse(charger.intervalTime!));
+
+      await Future.delayed(delayDuration);
+      await sendStatusNotification(
+          charger.id!, "StatusNotification", "Available", "", "", "", 0, 0);
+
+      await Future.delayed(delayDuration);
+
+      await sendStatusNotification(
+          charger.id!, "StatusNotification", "Available", "", "", "", 0, 1);
+
+      chargerState[charger.id!] = 'heartbeat';
+    } else {
+      DateTime utcNow = DateTime.now().toUtc();
+      String sign = timeZone.substring(3, 4);
+      int hours = int.parse(timeZone.substring(4, 6));
+      int minutes = int.parse(timeZone.substring(7));
+      int totalOffsetMinutes = (hours * 60 + minutes);
+      DateTime now = utcNow.add(Duration(
+          minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+      messageId[charger.id!] = log['messageId'];
+      chargerState[charger.id!] = 'charging';
+      sessionEndTime[charger.id!] = (now.millisecondsSinceEpoch ~/ 1000) - 3600;
+      sumKwh[charger.id!] = log['meter_value'];
+      transactionId[charger.id!] = log['transactionId'];
+      beginMeterValue[charger.id!] = log['begin_meter_value'];
+      cardUId[charger.id!] = log['uid'];
+      numberOfCharge[charger.id!] = log['numberOfCharge'];
+      numberOfChargeDays[charger.id!] = log['numberOfChargeDays'];
+      stopChargingImmediately(chargerId);
+    }
+  }
+
+  Future<void> sendHeartbeat(int chargerId, int repeat) async {
+    var heartbeat =
+        jsonEncode([2, "${messageId[chargerId]++}", "Heartbeat", {}]);
+    await sendMessage(heartbeat, chargerId);
+  }
+
+  Future<void> sendStatusNotification(
+      int chargerId,
+      String status,
+      String info,
+      String? cardData,
+      String? cardUId,
+      String? reference,
+      int repeatUntil,
+      int connectorId) async {
+    var statusNotification = info == "Authorize"
+        ? jsonEncode([
+            2,
+            "${messageId[chargerId]++}",
+            "Authorize",
+            {"idTag": cardUId}
+          ])
+        : cardData == "Card detected"
+            ? jsonEncode([
+                2,
+                "${messageId[chargerId]++}",
+                "StatusNotification",
+                {
+                  "connectorId": 0,
+                  "errorCode": "NoError",
+                  "info": "Info: Charge card $cardUId detected",
+                  "status": info
+                }
+              ])
+            : status == "SuspendedEV"
+                ? jsonEncode([
+                    2,
+                    "${messageId[chargerId]++}",
+                    "StatusNotification",
+                    {
+                      "connectorId": 1,
+                      "errorCode": "NoError",
+                      "status": "SuspendedEV"
+                    }
+                  ])
+                : jsonEncode([
+                    2,
+                    "${messageId[chargerId]++}",
+                    "StatusNotification",
+                    {
+                      "connectorId": connectorId,
+                      "errorCode": "NoError",
+                      "status": info
+                    }
+                  ]);
+
+    await sendMessage(statusNotification, chargerId);
+  }
+
+  Future<void> startTransaction(
+      int chargerId, String cardNumber, double meterValue) async {
+    DateTime utcNow = DateTime.now().toUtc();
+    String sign = timeZone.substring(3, 4);
+    int hours = int.parse(timeZone.substring(4, 6));
+    int minutes = int.parse(timeZone.substring(7));
+    int totalOffsetMinutes = (hours * 60 + minutes);
+    DateTime now = utcNow.add(Duration(
+        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+    String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+    startTime[chargerId] = timestamp;
+    var startTransaction = jsonEncode([
+      2,
+      "${messageId[chargerId]++}",
+      "StartTransaction",
+      {
+        "timestamp": timestamp,
+        "connectorId": 1,
+        "meterStart": meterValue.round(),
+        "idTag": cardNumber
+      }
+    ]);
+
+    await sendMessage(startTransaction, chargerId);
+  }
+
+  Future<void> sendMeterValues(
+      int chargerId, Map<String, dynamic> payload) async {
+    var startTransaction = jsonEncode([
+      2,
+      "${messageId[chargerId]++}",
+      "MeterValues",
+      {
+        "connectorId": 1,
+        "transactionId": transactionId[chargerId] ?? 1,
+        "meterValue": [payload]
+      }
+    ]);
+
+    await sendMessage(startTransaction, chargerId);
+  }
+
+  Future<void> stopTransaction(
+      int chargerId, double beginValue, double lastValue, String idTag) async {
+    DateTime utcNow = DateTime.now().toUtc();
+    String sign = timeZone.substring(3, 4);
+    int hours = int.parse(timeZone.substring(4, 6));
+    int minutes = int.parse(timeZone.substring(7));
+    int totalOffsetMinutes = (hours * 60 + minutes);
+    DateTime now = utcNow.add(Duration(
+        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+    String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
+    var stopTransaction = jsonEncode([
+      2,
+      "${messageId[chargerId]++}",
+      "StopTransaction",
+      {
+        "timestamp": "${timestamp}",
+        "transactionId": transactionId[chargerId],
+        "meterStop": lastValue.round(),
+        "idTag": idTag,
+        "reason": "EVDisconnected",
+        "transactionData": [
+          {
+            "timestamp": "${startTime[chargerId]}",
+            "sampledValue": [
+              {
+                "value": "${(beginValue / 1000).toStringAsFixed(3)}",
+                "context": "Transaction.Begin",
+                "unit": "kWh"
+              }
+            ]
+          },
+          {
+            "timestamp": "${timestamp}",
+            "sampledValue": [
+              {
+                "value": "${(lastValue / 1000).toStringAsFixed(3)}",
+                "context": "Transaction.End",
+                "unit": "kWh"
+              }
+            ]
+          }
+        ]
+      }
+    ]);
+    await sendMessage(stopTransaction, chargerId);
+    DatabaseHelper.instance.deleteNotificationLog(chargerId);
+  }
+}
