@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:ev_charger/controllers/session_controller.dart';
 import 'package:ev_charger/views/widgets/dialog/stop_dialog.dart';
 import 'package:ev_charger/views/widgets/navigation_item.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+
+import '../../services/database_helper.dart';
 
 class ActiveSessionContent extends StatefulWidget {
   const ActiveSessionContent({super.key});
@@ -14,6 +18,30 @@ class ActiveSessionContent extends StatefulWidget {
 
 class _ActiveSessionContentState extends State<ActiveSessionContent> {
   final SessionController sessionController = Get.put(SessionController());
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<String> formatDate(String dateTime) async {
+    var timeZone = await DatabaseHelper.instance.getUtcTime();
+
+    var time = DateFormat('yyyy-MM-dd – HH:mm').format(
+        DateTime.fromMillisecondsSinceEpoch(
+            int.parse(dateTime) * 1000));
+
+    DateTime utcNow = DateTime.now().toUtc();
+
+    String sign = timeZone.substring(3, 4); // Extracting the sign (+ or -)
+    int hours = int.parse(timeZone.substring(4, 6)); // Extracting the hours
+    int minutes = int.parse(timeZone.substring(7)); // Extracting the minutes
+    int totalOffsetMinutes = (hours * 60 + minutes);
+    DateTime now = utcNow.add(Duration(
+        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
+
+    return DateFormat('yyyy-MM-dd HH:mm').format(now);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,13 +147,21 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
                             ),
                           ),
                           Expanded(
-                            child: Text(
-                              DateFormat('yyyy-MM-dd – HH:mm').format(
-                                  DateTime.fromMillisecondsSinceEpoch(
-                                      int.parse(session.transactionSession) *
-                                          1000)),
-                              textAlign: TextAlign.center,
-                            ),
+                           child: FutureBuilder<String>(
+                             future: formatDate(session.transactionSession),
+                             builder: (context,snapshot){
+                               if (snapshot.connectionState == ConnectionState.waiting) {
+                                 // While data is loading
+                                 return const Text("null");
+                               } else if (snapshot.hasError) {
+                                 // If there's an error
+                                 return Text('Error: ${snapshot.error}');
+                               } else {
+                                 // If data is loaded successfully
+                                 return ChildText(data: snapshot.data!);
+                               }
+                             },
+                           ),
                           ),
                           Expanded(
                             child: Text(
@@ -168,5 +204,16 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
             )
           ],
         ));
+  }
+}
+
+class ChildText extends StatelessWidget {
+  final String data;
+
+  const ChildText({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(data,textAlign: TextAlign.center);
   }
 }

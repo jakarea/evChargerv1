@@ -12,8 +12,8 @@ import 'package:get/get.dart';
 
 class DatabaseHelper {
   // Name of the database file.
-  // static const _databaseName = "EvCharger8.db";
-  static const _databaseName = "EvCharger17A.db";
+   static const _databaseName = "EvCharger_test101.db";
+  //static const _databaseName = "EvCharger17A.db";
   // Version of the database, used for migrations and upgrades.
   static const _databaseVersion = 1;
 
