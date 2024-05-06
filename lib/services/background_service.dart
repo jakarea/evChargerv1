@@ -31,7 +31,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 60;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -64,7 +64,7 @@ class BackgroundService {
   Map<String, dynamic>? forceChargerr;
   List<String> startTime = List.filled(900,
       DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(DateTime.now()).toString());
-  static const Duration delayDuration = Duration(seconds: 2);
+  static const Duration delayDuration = Duration(seconds: 3);
 
   factory BackgroundService() {
     return _instance;
@@ -167,7 +167,7 @@ class BackgroundService {
     ChargersViewModel charger = ChargersViewModel.fromJson(forceChargerr!);
     chargerState[charger.id!] = 'heartbeat';
     await DatabaseHelper.instance.updateTime(chargerId, 5);
-    // print("startChargingImmediately 163");
+    print("startChargingImmediately 163");
   }
 
   int getRandomNumber() {
@@ -202,17 +202,6 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
-    try {
-      final String url = 'wss://ocpp.e-flux.nl/1.6/e-flux/ITA_220202';
-      final channel =
-          IOWebSocketChannel.connect(url, protocols: ['ocpp1.6', 'ocpp1.5']);
-
-      // Rest of your WebSocket handling code...
-    } catch (e) {
-      //  print('WebSocket connection error: $e');
-      // Handle connection errors
-    }
-
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     bool isConnected = true;
@@ -325,13 +314,13 @@ class BackgroundService {
 
       switch (currentState) {
         case 'heartbeat':
-          await connectToWebSocket(charger.urlToConnect!, charger.id!)
-              .then((_) {
-            // print('WebSocket connection established in heartbeat: xx');
-            // print(charger.id);
-          }).catchError((error) {
-            // print('Error establishing WebSocket connection: $error');
-          });
+          // await connectToWebSocket(charger.urlToConnect!, charger.id!)
+          //     .then((_) {
+          //   // print('WebSocket connection established in heartbeat: xx');
+          //   // print(charger.id);
+          // }).catchError((error) {
+          //   // print('Error establishing WebSocket connection: $error');
+          // });
           //  print('Step 3 ');
           // print(charger.id);
           // print("force heartbeat ,  318");
@@ -463,7 +452,7 @@ class BackgroundService {
               chargerState[charger.id!] = 'heartbeat';
             } else {
               //  print('Step 7');
-              //  print("start chargong,  447");
+              print("start chargong,  447");
               nextSession[charger.id!] = getRandomSessionRestTime(
                   numberOfCharge[charger.id!],
                   numberOfChargeDays[charger.id!],
@@ -586,13 +575,13 @@ class BackgroundService {
           break;
 
         case 'charging':
-          await connectToWebSocket(charger.urlToConnect!, charger.id!)
-              .then((_) {
-            //  print('WebSocket connection established in heartbeat: 447');
-            // print(charger.id);
-          }).catchError((error) {
-            // print('Error establishing WebSocket connection: $error');
-          });
+          // await connectToWebSocket(charger.urlToConnect!, charger.id!)
+          //     .then((_) {
+          //   //  print('WebSocket connection established in heartbeat: 447');
+          //   // print(charger.id);
+          // }).catchError((error) {
+          //   // print('Error establishing WebSocket connection: $error');
+          // });
           intervalTime[charger.id!] = meterInterval;
           DateTime utcNow = DateTime.now().toUtc();
           String sign = timeZone.substring(3, 4);
@@ -604,7 +593,7 @@ class BackgroundService {
 
           if (sessionEndTime[charger.id!] >=
               (now.millisecondsSinceEpoch ~/ 1000)) {
-            //  print('Step 12');
+            print('Step 12 charging');
             DateTime utcNow = DateTime.now().toUtc();
             String sign = timeZone.substring(3, 4);
             int hours = int.parse(timeZone.substring(4, 6));
@@ -618,14 +607,15 @@ class BackgroundService {
             lastNotificationTimeDiff[charger.id!] =
                 nowTime - lastNotificationTime[charger.id!];
             if (lastNotificationTimeDiff[charger.id!] >= meterInterval * 2) {
-              await connectToWebSocket(charger.urlToConnect!, charger.id!)
-                  .then((_) {
-                // print('WebSocket connection established: 443 step 12');
-                // print(charger.id);
-                stopChargingImmediately(charger.id!);
-              }).catchError((error) {
-                // print('Error establishing WebSocket connection: $error');
-              });
+              // await connectToWebSocket(charger.urlToConnect!, charger.id!)
+              //     .then((_) {
+              //   // print('WebSocket connection established: 443 step 12');
+              //   // print(charger.id);
+
+              // }).catchError((error) {
+              //   // print('Error establishing WebSocket connection: $error');
+              // });
+              stopChargingImmediately(charger.id!);
             }
             sumKwh[charger.id!] = sumKwh[charger.id!] +
                 (lastNotificationTimeDiff[charger.id!] * wPerSec[charger.id!]);
@@ -819,6 +809,8 @@ class BackgroundService {
       channel.stream.listen((data) async {
         // Decode the incoming JSON data
         dynamic decodedData = jsonDecode(data);
+        print("Received:");
+        print(decodedData);
         if (decodedData[0] != 3) {
           await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
         }
@@ -856,9 +848,9 @@ class BackgroundService {
 
   Future<void> sendMessage(String message, int? chargerId) async {
     if (_sockets[chargerId!] != null) {
-      // print(message);
-      // print(_sockets[chargerId]);
-      // _sockets[chargerId]?.sink.add(message);
+      print(message);
+
+      _sockets[chargerId]?.sink.add(message);
     } else {
       await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
       //  print('WebSocket is not connected 857. $chargerId');
