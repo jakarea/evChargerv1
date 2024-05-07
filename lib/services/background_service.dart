@@ -60,6 +60,7 @@ class BackgroundService {
   int force = 0;
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
+  bool _isConnected = false;
 
   Map<String, dynamic>? forceCardData;
   Map<String, dynamic>? forceCharger;
@@ -272,8 +273,10 @@ class BackgroundService {
     }
     if (charger != null) {
       ChargersViewModel chargerViewModel = ChargersViewModel.fromJson(charger);
+
       String currentState = chargerState[chargerViewModel.id!];
-      intervalTime[chargerViewModel.id!] = int.parse(chargerViewModel.intervalTime!);
+      intervalTime[chargerViewModel.id!] =
+          int.parse(chargerViewModel.intervalTime!);
       CardViewModel? card;
 
       switch (currentState) {
@@ -315,18 +318,26 @@ class BackgroundService {
                 Random().nextInt(maxSessionTime - minSessionTime + 1);
 
             sessionEndTime[chargerViewModel.id!] =
-                randomTime[chargerViewModel.id!] + now.millisecondsSinceEpoch ~/ 1000;
-            wPerSec[chargerViewModel.id!] = randomKw[chargerViewModel.id!] / 3.6;
+                randomTime[chargerViewModel.id!] +
+                    now.millisecondsSinceEpoch ~/ 1000;
+            wPerSec[chargerViewModel.id!] =
+                randomKw[chargerViewModel.id!] / 3.6;
 
-            beginMeterValue[chargerViewModel.id!] = double.parse(chargerViewModel.meterValue!);
+            beginMeterValue[chargerViewModel.id!] =
+                double.parse(chargerViewModel.meterValue!);
 
-            sumKwh[chargerViewModel.id!] = beginMeterValue[chargerViewModel.id!];
+            sumKwh[chargerViewModel.id!] =
+                beginMeterValue[chargerViewModel.id!];
             cardUId[chargerViewModel.id!] = card.uid;
-            chargeBoxSerialNumber[chargerViewModel.id!] = chargerViewModel.chargeBoxSerialNumber!;
+            chargeBoxSerialNumber[chargerViewModel.id!] =
+                chargerViewModel.chargeBoxSerialNumber!;
+
             cardId[chargerViewModel.id!] = card.id!;
-            minIntervalBeforeReuse[chargerViewModel.id!] = card.minIntervalBeforeReuse!;
+            minIntervalBeforeReuse[chargerViewModel.id!] =
+                card.minIntervalBeforeReuse!;
             numberOfCharge[chargerViewModel.id!] = int.parse(card.times);
-            numberOfChargeDays[chargerViewModel.id!] = int.parse(card.daysUntil);
+            numberOfChargeDays[chargerViewModel.id!] =
+                int.parse(card.daysUntil);
             force = 0;
 
             Random random = Random();
@@ -336,9 +347,15 @@ class BackgroundService {
                 min + random.nextInt(meterInterval - min + 1);
             await Future.delayed(Duration(seconds: preparingInterval));
 
-            await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                "Preparing", "", "", "", randomTime[chargerViewModel.id!], 1);
-
+            await sendStatusNotification(
+                chargerViewModel.id!,
+                "StatusNotification",
+                "Preparing",
+                "",
+                "",
+                "",
+                randomTime[chargerViewModel.id!],
+                1);
 
             await sendStatusNotification(
                 chargerViewModel.id!,
@@ -350,15 +367,21 @@ class BackgroundService {
                 randomTime[chargerViewModel.id!],
                 1);
 
-            await sendStatusNotification(chargerViewModel.id!, "AuthorizeNotification",
-                "Authorize", "", card.uid, "", randomTime[chargerViewModel.id!], 1);
+            await sendStatusNotification(
+                chargerViewModel.id!,
+                "AuthorizeNotification",
+                "Authorize",
+                "",
+                card.uid,
+                "",
+                randomTime[chargerViewModel.id!],
+                1);
             //You can now use 'card' safely within this block.
             await Future.delayed(delayDuration);
 
             // ignore: unrelated_type_equality_checks
             if (responseStatus[chargerViewModel.id!] == 'Blocked' ||
                 responseStatus[chargerViewModel.id!] == 'Invalid') {
-
               // TODO: and send mail to admin
               var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
@@ -371,31 +394,34 @@ class BackgroundService {
                   headerText: "BoxSerialNumber: $chargeBoxNumber",
                   contentText: "MSP: $msp <br> Card Number: $cardNumber");
 
-              nextSession[chargerViewModel.id!] = await getRandomSessionRestTime(
-                  numberOfCharge[chargerViewModel.id!],
-                  numberOfChargeDays[chargerViewModel.id!],
-                  randomTime[chargerViewModel.id!]);
+              nextSession[chargerViewModel.id!] =
+                  await getRandomSessionRestTime(
+                      numberOfCharge[chargerViewModel.id!],
+                      numberOfChargeDays[chargerViewModel.id!],
+                      randomTime[chargerViewModel.id!]);
 
               await DatabaseHelper.instance.updateTimeField(
-                  cardId[chargerViewModel.id!], nextSession[chargerViewModel.id!]);
+                  cardId[chargerViewModel.id!],
+                  nextSession[chargerViewModel.id!]);
               await DatabaseHelper.instance.updateChargerId(card.id!, '');
 
-              await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                  "Available", "", "", "", 0, 1);
+              await sendStatusNotification(chargerViewModel.id!,
+                  "StatusNotification", "Available", "", "", "", 0, 1);
 
-              await sendHeartbeat(chargerViewModel.id!, intervalTime[chargerViewModel.id!]);
+              await sendHeartbeat(
+                  chargerViewModel.id!, intervalTime[chargerViewModel.id!]);
               chargerState[chargerViewModel.id!] = 'heartbeat';
             } else {
-
               print("start chargong,  447");
               nextSession[chargerViewModel.id!] = getRandomSessionRestTime(
                   numberOfCharge[chargerViewModel.id!],
                   numberOfChargeDays[chargerViewModel.id!],
                   randomTime[chargerViewModel.id!]);
               await DatabaseHelper.instance.updateTimeField(
-                  cardId[chargerViewModel.id!], nextSession[chargerViewModel.id!]);
-              await sendStatusNotification(chargerViewModel.id!, "SuspendedEV", "", "",
-                  "", "", randomTime[chargerViewModel.id!], 1);
+                  cardId[chargerViewModel.id!],
+                  nextSession[chargerViewModel.id!]);
+              await sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
+                  "", "", "", "", randomTime[chargerViewModel.id!], 1);
 
               await DatabaseHelper.instance
                   .updateChargingStatus(chargerViewModel.id!, "Charging");
@@ -405,8 +431,8 @@ class BackgroundService {
               final SessionController sessionController =
                   Get.find<SessionController>();
 
-              await startTransaction(
-                  chargerViewModel.id!, card.uid, beginMeterValue[chargerViewModel.id!]);
+              await startTransaction(chargerViewModel.id!, card.uid,
+                  beginMeterValue[chargerViewModel.id!]);
               await Future.delayed(delayDuration);
 
               DateTime utcNow = DateTime.now().toUtc();
@@ -440,7 +466,6 @@ class BackgroundService {
                       (now.millisecondsSinceEpoch ~/ 1000).toString(),
                   kwh: randomKw[chargerViewModel.id!].toString(),
                   sessionTime: randomTime[chargerViewModel.id!].toString()));
-
 
               await sendMeterValues(chargerViewModel.id!, {
                 "timestamp": "${timestamp}",
@@ -492,8 +517,15 @@ class BackgroundService {
                   numberOfCharge: numberOfCharge[chargerViewModel.id!],
                   numberOfChargeDays: numberOfChargeDays[chargerViewModel.id!]);
 
-              await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                  "Charging", "", "", "", randomTime[chargerViewModel.id!], 1);
+              await sendStatusNotification(
+                  chargerViewModel.id!,
+                  "StatusNotification",
+                  "Charging",
+                  "",
+                  "",
+                  "",
+                  randomTime[chargerViewModel.id!],
+                  1);
               chargerState[chargerViewModel.id!] = 'charging';
               lastNotificationTime[chargerViewModel.id!] =
                   now.millisecondsSinceEpoch ~/ 1000;
@@ -505,7 +537,6 @@ class BackgroundService {
           break;
 
         case 'charging':
-
           intervalTime[chargerViewModel.id!] = meterInterval;
           DateTime utcNow = DateTime.now().toUtc();
           String sign = timeZone.substring(3, 4);
@@ -530,11 +561,13 @@ class BackgroundService {
             nowTime = now.millisecondsSinceEpoch ~/ 1000;
             lastNotificationTimeDiff[chargerViewModel.id!] =
                 nowTime - lastNotificationTime[chargerViewModel.id!];
-            if (lastNotificationTimeDiff[chargerViewModel.id!] >= meterInterval * 2) {
+            if (lastNotificationTimeDiff[chargerViewModel.id!] >=
+                meterInterval * 2) {
               stopChargingImmediately(chargerViewModel.id!);
             }
             sumKwh[chargerViewModel.id!] = sumKwh[chargerViewModel.id!] +
-                (lastNotificationTimeDiff[chargerViewModel.id!] * wPerSec[chargerViewModel.id!]);
+                (lastNotificationTimeDiff[chargerViewModel.id!] *
+                    wPerSec[chargerViewModel.id!]);
 
             utcNow = DateTime.now().toUtc();
             sign = timeZone.substring(3, 4);
@@ -550,7 +583,8 @@ class BackgroundService {
               "timestamp": "${timestamp}",
               "sampledValue": [
                 {
-                  "value": "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
+                  "value":
+                      "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
                   "context": "Sample.Periodic",
                   "measurand": "Energy.Active.Import.Register",
                   "location": "Outlet",
@@ -560,8 +594,8 @@ class BackgroundService {
             });
             lastNotificationTime[chargerViewModel.id!] =
                 now.millisecondsSinceEpoch ~/ 1000;
-            await DatabaseHelper.instance
-                .updateBeginMeterValue(chargerViewModel.id!, sumKwh[chargerViewModel.id!]);
+            await DatabaseHelper.instance.updateBeginMeterValue(
+                chargerViewModel.id!, sumKwh[chargerViewModel.id!]);
 
             DatabaseHelper.instance.logNotification(
                 messageId: messageId[chargerViewModel.id!],
@@ -582,7 +616,8 @@ class BackgroundService {
               Random random = Random();
               int min = interval ~/ 5;
               int max = interval - min;
-              intervalTime[chargerViewModel.id!] = min + random.nextInt(max - min + 1);
+              intervalTime[chargerViewModel.id!] =
+                  min + random.nextInt(max - min + 1);
             }
           } else {
             DateTime utcNow = DateTime.now().toUtc();
@@ -599,10 +634,12 @@ class BackgroundService {
                 nowTime - lastNotificationTime[chargerViewModel.id!];
 
             sumKwh[chargerViewModel.id!] = sumKwh[chargerViewModel.id!] +
-                (lastNotificationTimeDiff[chargerViewModel.id!] * wPerSec[chargerViewModel.id!]);
-            await sendStatusNotification(chargerViewModel.id!, "SuspendedEV", "", "", "",
-                "", randomTime[chargerViewModel.id!], 1);
-            await DatabaseHelper.instance.deleteNotificationLog(chargerViewModel.id!);
+                (lastNotificationTimeDiff[chargerViewModel.id!] *
+                    wPerSec[chargerViewModel.id!]);
+            await sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
+                "", "", "", "", randomTime[chargerViewModel.id!], 1);
+            await DatabaseHelper.instance
+                .deleteNotificationLog(chargerViewModel.id!);
 
             nowTime = now.millisecondsSinceEpoch ~/ 1000;
 
@@ -612,7 +649,8 @@ class BackgroundService {
               "timestamp": "${timestamp}",
               "sampledValue": [
                 {
-                  "value": "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
+                  "value":
+                      "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
                   "context": "Sample.Periodic",
                   "measurand": "Energy.Active.Import.Register",
                   "location": "Outlet",
@@ -621,8 +659,15 @@ class BackgroundService {
               ]
             });
 
-            await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                "Finishing", "", "", "", randomTime[chargerViewModel.id!], 1);
+            await sendStatusNotification(
+                chargerViewModel.id!,
+                "StatusNotification",
+                "Finishing",
+                "",
+                "",
+                "",
+                randomTime[chargerViewModel.id!],
+                1);
 
             timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
 
@@ -630,7 +675,8 @@ class BackgroundService {
               "timestamp": "${timestamp}",
               "sampledValue": [
                 {
-                  "value": "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
+                  "value":
+                      "${(sumKwh[chargerViewModel.id!] / 1000).toStringAsFixed(3)}",
                   "context": "Transaction.End",
                   "measurand": "Energy.Active.Import.Register",
                   "location": "Outlet",
@@ -642,38 +688,45 @@ class BackgroundService {
 
             await DatabaseHelper.instance
                 .updateChargingStatus(chargerViewModel.id!, "N/A");
-            await DatabaseHelper.instance.updateChargerStatus(chargerViewModel.id!, "2");
+            await DatabaseHelper.instance
+                .updateChargerStatus(chargerViewModel.id!, "2");
 
-            await stopTransaction(chargerViewModel.id!, beginMeterValue[chargerViewModel.id!],
-                sumKwh[chargerViewModel.id!], cardUId[chargerViewModel.id!]);
+            await stopTransaction(
+                chargerViewModel.id!,
+                beginMeterValue[chargerViewModel.id!],
+                sumKwh[chargerViewModel.id!],
+                cardUId[chargerViewModel.id!]);
             await DatabaseHelper.instance
                 .deleteActiveSessionByChargerId(chargerViewModel.id!);
 
-            await DatabaseHelper.instance
-                .updateBeginMeterValue(chargerViewModel.id!, sumKwh[chargerViewModel.id!]);
-            sessionController.removeSessionByChargerId(chargerViewModel.id.toString());
+            await DatabaseHelper.instance.updateBeginMeterValue(
+                chargerViewModel.id!, sumKwh[chargerViewModel.id!]);
+            sessionController
+                .removeSessionByChargerId(chargerViewModel.id.toString());
             await DatabaseHelper.instance
                 .updateChargerId(cardId[chargerViewModel.id!], "");
-            await DatabaseHelper.instance.removeChargerId(chargerViewModel.id!, "");
+            await DatabaseHelper.instance
+                .removeChargerId(chargerViewModel.id!, "");
 
-            await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                "Available", "", "", "", 0, 0);
+            await sendStatusNotification(chargerViewModel.id!,
+                "StatusNotification", "Available", "", "", "", 0, 0);
             // Delay for 1 second
             await Future.delayed(delayDuration);
-            await sendStatusNotification(chargerViewModel.id!, "StatusNotification",
-                "Available", "", "", "", 0, 1);
+            await sendStatusNotification(chargerViewModel.id!,
+                "StatusNotification", "Available", "", "", "", 0, 1);
 
             chargerState[chargerViewModel.id!] = 'heartbeat';
           }
 
           break;
         default:
-          await connectToWebSocket(chargerViewModel.urlToConnect!, chargerViewModel.id!)
-              .then((_) {
-          }).catchError((error) {
-          });
+          await connectToWebSocket(
+                  chargerViewModel.urlToConnect!, chargerViewModel.id!)
+              .then((_) {})
+              .catchError((error) {});
 
-          await DatabaseHelper.instance.updateChargerStatus(chargerViewModel.id!, "2");
+          await DatabaseHelper.instance
+              .updateChargerStatus(chargerViewModel.id!, "2");
           await sendBootNotification(chargerViewModel);
       } // switch end
 
@@ -729,8 +782,17 @@ class BackgroundService {
             responseStatus[chargerId] = status;
           }
         }
+      }, onDone: () {
+        print('$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}');
+        _isConnected = false;
+        _retryConnection(url, chargerId);
+      }, onError: (error) {
+        print('$chargerId Error in WebSocket connection: $error');
+        _isConnected = false;
+        _retryConnection(url, chargerId);
       });
       _sockets[chargerId] = channel;
+      _isConnected = true;
       // Optionally, send an initial message or perform an action upon successful connection
       // For example, sending a BootNotification for each charger
     } catch (e) {
@@ -739,18 +801,34 @@ class BackgroundService {
     }
   }
 
+  /*retrying websocket connection*/
+  void _retryConnection(String url, int chargerId) {
+    if (!_isConnected) {
+      connectToWebSocket(url, chargerId);
+    }
+  }
+
   Future<void> sendMessage(String message, int? chargerId) async {
+    if (_sockets[chargerId!]?.closeCode == null) {
+      print('$chargerId WebSocket connection is active');
+    } else {
+      print('$chargerId WebSocket connection is closed');
+    }
+
     if (_sockets[chargerId!] != null) {
       print(message);
+      if(chargerId != 3){
+        _sockets[chargerId]?.sink.add(message);
+      }else{
+        print("charger ID $chargerId");
+      }
 
-      _sockets[chargerId]?.sink.add(message);
     } else {
       await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
     }
   }
 
   Future<void> sendBootNotification(ChargersViewModel charger) async {
-
     int? chargerId = charger.id;
 
     var log = await DatabaseHelper.instance.getNotificationLog("$chargerId");
@@ -769,13 +847,13 @@ class BackgroundService {
           "firmwareVersion": charger.firmwareVersion
         }
       ]);
-//bootNotification
+    //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
       await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A");
       await DatabaseHelper.instance.removeChargerId(charger.id!, "");
 
-      await sendMessage(bootNotification, charger.id);
+     // await sendMessage(bootNotification, charger.id);
 
       await DatabaseHelper.instance
           .updateTime(charger.id!, int.parse(charger.intervalTime!));
@@ -864,7 +942,6 @@ class BackgroundService {
                     "StatusNotification",
                     {
                       "connectorId": connectorId,
-
                       "errorCode": "NoError",
                       "status": info
                     }

@@ -28,9 +28,8 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
     var timeZone = await DatabaseHelper.instance.getUtcTime();
 
     var time = DateFormat('yyyy-MM-dd – HH:mm').format(
-        DateTime.fromMillisecondsSinceEpoch(
-            int.parse(dateTime) * 1000));
-
+        DateTime.fromMillisecondsSinceEpoch(int.parse(dateTime) * 1000));
+    print("time $time");
     DateTime utcNow = DateTime.now().toUtc();
 
     String sign = timeZone.substring(3, 4); // Extracting the sign (+ or -)
