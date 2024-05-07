@@ -57,3 +57,17 @@ Podfile.lock
 Icon?
 ehthumbs.db
 Thumbs.db
+
+
+# macOS Flutter ephemeral files
+macos/Flutter/ephemeral/Flutter-Generated.xcconfig
+macos/Flutter/ephemeral/flutter_export_environment.sh
+macos/Flutter/ephemeral/.app_filename
+macos/Flutter/ephemeral/.symlinks/plugins/bitsdojo_window_macos
+macos/Flutter/ephemeral/.symlinks/plugins/connectivity_macos
+macos/Flutter/ephemeral/.symlinks/plugins/path_provider_foundation
+macos/Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation
+macos/Flutter/ephemeral/FlutterInputs.xcfilelist
+macos/Flutter/ephemeral/FlutterMacOS.podspec
+macos/Flutter/ephemeral/FlutterOutputs.xcfilelist
+macos/Flutter/ephemeral/tripwire
