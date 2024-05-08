@@ -12,7 +12,7 @@ import 'package:get/get.dart';
 
 class DatabaseHelper {
   // Name of the database file.
-   static const _databaseName = "EvCharger_test101.db";
+  static const _databaseName = "EvCharger_test101.db";
   //static const _databaseName = "EvCharger17A.db";
   // Version of the database, used for migrations and upgrades.
   static const _databaseVersion = 1;
@@ -669,7 +669,7 @@ class DatabaseHelper {
       currentHour,
       currentHour
     ]);
-    // print(result);
+    print(result);
     if (result.isNotEmpty) {
       return result.first;
     }
@@ -678,7 +678,7 @@ class DatabaseHelper {
 
   Future<void> updateTimeField(int cardId, int newTime) async {
     // Get a reference to the database.
-    // print("newTime for $cardId is $newTime");
+    print("newTime for $cardId is $newTime");
     final db = await database; // Assuming 'database' is your database instance.
 
     // Update the 'time' field with the new value for the specified card ID.
