@@ -1,13 +1,11 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=/opt/homebrew/Caskroom/flutter/3.19.2/flutter
-FLUTTER_APPLICATION_PATH=/Users/jakareaparvez/Desktop/mobile-app/evChargerv1
+FLUTTER_ROOT=/home/jakaria/sdks/flutter
+FLUTTER_APPLICATION_PATH=/home/jakaria/Documents/Flutter/evChargerv1
 COCOAPODS_PARALLEL_CODE_SIGN=true
-FLUTTER_TARGET=/Users/jakareaparvez/Desktop/mobile-app/evChargerv1/lib/main.dart
 FLUTTER_BUILD_DIR=build
 FLUTTER_BUILD_NAME=1.0.0
 FLUTTER_BUILD_NUMBER=1
-DART_DEFINES=RkxVVFRFUl9XRUJfQ0FOVkFTS0lUX1VSTD1odHRwczovL3d3dy5nc3RhdGljLmNvbS9mbHV0dGVyLWNhbnZhc2tpdC9kNzk0NTgwMDc3MTI1NjQ3Y2ZjYjBmYTY3MmQ2MmFjODdiYmYyN2Q1Lw==
 DART_OBFUSCATION=false
 TRACK_WIDGET_CREATION=true
 TREE_SHAKE_ICONS=false
-PACKAGE_CONFIG=/Users/jakareaparvez/Desktop/mobile-app/evChargerv1/.dart_tool/package_config.json
+PACKAGE_CONFIG=.dart_tool/package_config.json

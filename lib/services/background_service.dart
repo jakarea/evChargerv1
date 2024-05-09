@@ -142,7 +142,7 @@ class BackgroundService {
         minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
 
     sessionEndTime[chargerId] = (now.millisecondsSinceEpoch ~/ 1000) - 4500;
-    await DatabaseHelper.instance.updateTime(chargerId, 5);
+    await DatabaseHelper.instance.updateTime(chargerId, 15);
   }
 
   Future<bool> checkInternetConnection() async {
@@ -160,7 +160,7 @@ class BackgroundService {
     forceCardData = await DatabaseHelper.instance.getCardById(cardId);
     ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
     chargerState[charger.id!] = 'heartbeat';
-    await DatabaseHelper.instance.updateTime(chargerId, 5);
+    await DatabaseHelper.instance.updateTime(chargerId, 15);
     print("startChargingImmediately 163\n");
   }
 
@@ -460,13 +460,13 @@ class BackgroundService {
               DatabaseHelper.instance.insertOrUpdateActiveSession(
                   chargerId: chargerViewModel.id!,
                   cardId: card.id!,
-                  transactionStartTime: now.millisecondsSinceEpoch ~/ 1000,
+                  transactionStartTime: utcNow.millisecondsSinceEpoch ~/ 1000,
                   kwh: randomKw[chargerViewModel.id!].toString(),
                   sessionTime: randomTime[chargerViewModel.id!].toString());
 
               sessionController.addSession(ActiveSessionModel(
-                  cardId: card.id.toString(),
-                  chargerId: chargerViewModel.id.toString(),
+                  cardId: card.id!.toInt(),
+                  chargerId: chargerViewModel.id!.toString(),
                   chargerName: chargerViewModel.chargePointVendor!,
                   chargerModel: chargerViewModel.chargePointModel!,
                   serialBox: chargerViewModel.chargeBoxSerialNumber!,
@@ -474,7 +474,7 @@ class BackgroundService {
                   msp: card.msp,
                   uid: card.uid,
                   transactionSession:
-                      (now.millisecondsSinceEpoch ~/ 1000).toString(),
+                      (now.millisecondsSinceEpoch ~/ 1000).toInt(),
                   kwh: randomKw[chargerViewModel.id!].toString(),
                   sessionTime: randomTime[chargerViewModel.id!].toString()));
               print("Step 8 end for : ${chargerViewModel.id}\n");
@@ -859,7 +859,7 @@ class BackgroundService {
           "firmwareVersion": charger.firmwareVersion
         }
       ]);
-//bootNotification
+      //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
       await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A");
@@ -900,6 +900,7 @@ class BackgroundService {
       cardUId[charger.id!] = log['uid'];
       numberOfCharge[charger.id!] = log['numberOfCharge'];
       numberOfChargeDays[charger.id!] = log['numberOfChargeDays'];
+
       stopChargingImmediately(chargerId);
     }
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ev_charger/controllers/session_controller.dart';
+import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/views/widgets/dialog/stop_dialog.dart';
 import 'package:ev_charger/views/widgets/navigation_item.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -19,29 +20,47 @@ class ActiveSessionContent extends StatefulWidget {
 class _ActiveSessionContentState extends State<ActiveSessionContent> {
   final SessionController sessionController = Get.put(SessionController());
 
+  List<ActiveSessionModel> sessionData=[];
+
   @override
   void initState() {
     super.initState();
+   getAllSessions();
   }
 
-  Future<String> formatDate(String dateTime) async {
+   Future<List<ActiveSessionModel>> getAllSessions() async {
+    var sessionMaps = await DatabaseHelper.instance.getSessions();
+
+    if(sessionMaps.isNotEmpty){
+      sessionData.assignAll(sessionMaps
+          .map((chargerMap) => ActiveSessionModel.fromJson(chargerMap))
+          .toList());
+    }
+
+    print("@@@@sessions ${sessionMaps}");
+    return sessionData;
+  }
+
+  Future<String> formatDate(int unixTime) async {
     var timeZone = await DatabaseHelper.instance.getUtcTime();
-
-    var time = DateFormat('yyyy-MM-dd – HH:mm').format(
-        DateTime.fromMillisecondsSinceEpoch(
-            int.parse(dateTime) * 1000));
-
-    DateTime utcNow = DateTime.now().toUtc();
-
-    String sign = timeZone.substring(3, 4); // Extracting the sign (+ or -)
-    int hours = int.parse(timeZone.substring(4, 6)); // Extracting the hours
-    int minutes = int.parse(timeZone.substring(7)); // Extracting the minutes
+    String sign = timeZone.substring(3, 4);
+    int hours = int.parse(timeZone.substring(4, 6));
+    int minutes = int.parse(timeZone.substring(7));
     int totalOffsetMinutes = (hours * 60 + minutes);
-    DateTime now = utcNow.add(Duration(
-        minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
 
-    return DateFormat('yyyy-MM-dd HH:mm').format(now);
+    // Convert Unix time to DateTime object
+    DateTime dateTime = DateTime.fromMillisecondsSinceEpoch(unixTime * 1000);
+    // Adjust dateTime by the timezone offset
+    DateTime adjustedDateTime = dateTime.add(Duration(minutes: sign == '-' ? totalOffsetMinutes : -totalOffsetMinutes));
+
+    var dbT = DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+    print("dbt : $dbT");
+    var dd = DateFormat('yyyy-MM-dd HH:mm').format(adjustedDateTime);
+    print(dd);
+    return dd;
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -110,100 +129,122 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
               ),
             ),
             Expanded(
-              child: Obx(() {
-                return ListView.builder(
-                  itemCount: sessionController.sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = sessionController.sessions[index];
-                    return Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                          border:
-                              Border.all(color: Colors.grey.withOpacity(0.4))),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              session.serialBox,
-                              textAlign: TextAlign.center,
-                            ),
+              child: FutureBuilder<List<ActiveSessionModel>>(
+                future: getAllSessions(), // Replace with your future function to fetch session data
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    // While data is loading
+                    return Text('loading: ${snapshot.error}');
+                  } else if (snapshot.hasError) {
+                    // If there's an error
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    // If data is loaded successfully
+                    final sessionData = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: sessionData.length,
+                      itemBuilder: (context, index) {
+                        final session = sessionData[index];
+                        return Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.withOpacity(0.4)),
                           ),
-                          Expanded(
-                            child: Text(
-                              session.cardNumber,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              session.msp,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              session.uid,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Expanded(
-                           child: FutureBuilder<String>(
-                             future: formatDate(session.transactionSession),
-                             builder: (context,snapshot){
-                               if (snapshot.connectionState == ConnectionState.waiting) {
-                                 // While data is loading
-                                 return const Text("null");
-                               } else if (snapshot.hasError) {
-                                 // If there's an error
-                                 return Text('Error: ${snapshot.error}');
-                               } else {
-                                 // If data is loaded successfully
-                                 return ChildText(data: snapshot.data!);
-                               }
-                             },
-                           ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              (double.parse(session.kwh) /
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  session.serialBox,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  session.cardNumber,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  session.msp,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  session.uid,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: FutureBuilder<String>(
+                                  future: formatDate(session.transactionSession),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      // While data is loading
+                                      return const Text("null");
+                                    } else if (snapshot.hasError) {
+                                      // If there's an error
+                                      return Text('Error: ${snapshot.error}');
+                                    } else {
+                                      // If data is loaded successfully
+                                      return ChildText(data: snapshot.data!);
+                                    }
+                                  },
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  (double.parse(session.kwh) /
                                       60 *
                                       double.parse(session.sessionTime) /
                                       60)
-                                  .toStringAsFixed(3),
-                              textAlign: TextAlign.center,
-                            ),
+                                      .toStringAsFixed(3),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  "${(int.parse(session.sessionTime) / 60).round()} min",
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Button(
+                                  onPressed: () {
+                                    stopDialog(context, session);
+                                  },
+                                  child: Text(
+                                    'Stop',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  style: ButtonStyle(
+                                    backgroundColor: ButtonState.all(Colors.red),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: Text(
-                              "${(int.parse(session.sessionTime) / 60).round()} min",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          Expanded(
-                              child: Button(
-                            onPressed: () {
-                              StopDialog.show(context,
-                                  chargerId: session.chargerId,
-                                cardId: session.cardId
-                              );
-                            },
-                            child: Text(
-                              'Stop',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            style: ButtonStyle(
-                              backgroundColor: ButtonState.all(Colors.red),
-                            ),
-                          ))
-                        ],
-                      ),
+                        );
+                      },
                     );
-                  },
-                );
-              }),
+                  }
+                },
+              ),
+
             )
           ],
         ));
+  }
+
+  void stopDialog(context,session) {
+    StopDialog.show(
+      context,
+      chargerId: session.chargerId,
+      cardId: session.cardId.toString(),
+    );
+
   }
 }
 
