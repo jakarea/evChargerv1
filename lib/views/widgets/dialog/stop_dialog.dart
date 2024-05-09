@@ -48,7 +48,7 @@ class StopDialog extends StatelessWidget {
                   sessionController.removeSessionByChargerId(chargerId!);
                   returnValue = true;
                   BackgroundService()
-                      .stopChargingImmediately(int.parse(chargerId!));
+                      .stopChargingImmediately(int.parse(chargerId));
 
                   await DatabaseHelper.instance
                       .updateChargerId(int.parse(cardId!), "");
