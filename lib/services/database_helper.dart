@@ -1,4 +1,5 @@
 import 'package:ev_charger/controllers/session_controller.dart';
+import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/models/smtp_view_model.dart';
 import 'package:ev_charger/views/widgets/dialog/custom_info_bar.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -971,4 +972,23 @@ class DatabaseHelper {
   }
 
   ///....................receiver email......................
+
+  /// Retrieve all sessions
+  Future<List<Map<String, Object?>>> getSessions() async {
+    Database db = await DatabaseHelper.instance.database;
+    return await db.rawQuery('''
+      SELECT *
+      FROM active_session
+      JOIN cards ON active_session.card_id = cards.id
+      JOIN chargers ON active_session.charger_id = chargers.id
+    ''');
+  }
+
+  /// delete a groups
+  Future<void> deleteSession(int id) async {
+    Database db = await instance.database;
+    // Proceed with the delete operation since the database is available
+    await db
+        .delete('active_session', where: 'charger_id = ?', whereArgs: [id]);
+  }
 }

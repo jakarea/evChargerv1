@@ -1,4 +1,6 @@
+
 import 'package:ev_charger/controllers/session_controller.dart';
+import 'package:ev_charger/views/pages/active_session_content.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:get/get.dart';
 import '../../../services/database_helper.dart';
@@ -7,16 +9,18 @@ import '../../../services/background_service.dart';
 class StopDialog extends StatelessWidget {
   const StopDialog({super.key});
 
+
   @override
   Widget build(BuildContext context) {
     return Container();
   }
 
-  static void show(
+  static bool show(
     BuildContext context, {
     String? chargerId,
     String? cardId,
   }) {
+    bool returnValue = false;
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -41,13 +45,13 @@ class StopDialog extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 onPressed: () async {
-
+                  print("StopDialog chargerID $chargerId");
+                  final SessionController sessionController =
+                  Get.find<SessionController>();
+                  sessionController.removeSessionByChargerId(chargerId!);
+                  returnValue = true;
                   BackgroundService()
                       .stopChargingImmediately(int.parse(chargerId!));
-
-                  final SessionController sessionController =
-                      Get.find<SessionController>();
-                  sessionController.removeSessionByChargerId(chargerId);
 
                   await DatabaseHelper.instance
                       .updateChargerId(int.parse(cardId!), "");
@@ -61,5 +65,7 @@ class StopDialog extends StatelessWidget {
             ],
           );
         });
+
+    return returnValue;
   }
 }
