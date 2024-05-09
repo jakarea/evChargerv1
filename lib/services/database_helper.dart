@@ -670,7 +670,7 @@ class DatabaseHelper {
       currentHour,
       currentHour
     ]);
-    print(result);
+
     if (result.isNotEmpty) {
       return result.first;
     }
@@ -679,7 +679,7 @@ class DatabaseHelper {
 
   Future<void> updateTimeField(int cardId, int newTime) async {
     // Get a reference to the database.
-    print("newTime for $cardId is $newTime");
+
     final db = await database; // Assuming 'database' is your database instance.
 
     // Update the 'time' field with the new value for the specified card ID.
@@ -988,7 +988,6 @@ class DatabaseHelper {
   Future<void> deleteSession(int id) async {
     Database db = await instance.database;
     // Proceed with the delete operation since the database is available
-    await db
-        .delete('active_session', where: 'charger_id = ?', whereArgs: [id]);
+    await db.delete('active_session', where: 'charger_id = ?', whereArgs: [id]);
   }
 }

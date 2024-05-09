@@ -1,4 +1,3 @@
-
 import 'package:ev_charger/controllers/session_controller.dart';
 import 'package:ev_charger/views/pages/active_session_content.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -8,7 +7,6 @@ import '../../../services/background_service.dart';
 
 class StopDialog extends StatelessWidget {
   const StopDialog({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +43,8 @@ class StopDialog extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 onPressed: () async {
-                  print("StopDialog chargerID $chargerId");
                   final SessionController sessionController =
-                  Get.find<SessionController>();
+                      Get.find<SessionController>();
                   sessionController.removeSessionByChargerId(chargerId!);
                   returnValue = true;
                   BackgroundService()

@@ -161,7 +161,7 @@ class BackgroundService {
     ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
     chargerState[charger.id!] = 'heartbeat';
     await DatabaseHelper.instance.updateTime(chargerId, 15);
-    print("startChargingImmediately 163\n");
+    // print("startChargingImmediately 163\n");
   }
 
   int getRandomSessionRestTime(int numberOfSession, int days, int lastSession) {
@@ -368,7 +368,6 @@ class BackgroundService {
                 "",
                 randomTime[chargerViewModel.id!],
                 1);
-            print("Step 5 end for : ${chargerViewModel.id}\n");
 
             print("Step 6 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
@@ -438,8 +437,6 @@ class BackgroundService {
               await sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
                   "", "", "", "", randomTime[chargerViewModel.id!], 1);
 
-              print("Step 7 end for : ${chargerViewModel.id}\n");
-
               print("Step 8  for : ${chargerViewModel.id}\n");
               detectionDelay = Random().nextInt(3);
               await delayInSeconds(detectionDelay);
@@ -477,7 +474,6 @@ class BackgroundService {
                       (now.millisecondsSinceEpoch ~/ 1000).toInt(),
                   kwh: randomKw[chargerViewModel.id!].toString(),
                   sessionTime: randomTime[chargerViewModel.id!].toString()));
-              print("Step 8 end for : ${chargerViewModel.id}\n");
 
               print("Step 9 for : ${chargerViewModel.id}\n");
 
@@ -495,7 +491,6 @@ class BackgroundService {
 
               detectionDelay = Random().nextInt(2);
               await delayInSeconds(detectionDelay);
-              print("Step 9 end for : ${chargerViewModel.id}\n");
 
               print("Step 10 for : ${chargerViewModel.id}\n");
               utcNow = DateTime.now().toUtc();
@@ -521,7 +516,6 @@ class BackgroundService {
                   }
                 ]
               });
-              print("Step 10 end for : ${chargerViewModel.id}\n");
 
               print("Step 11 for : ${chargerViewModel.id}\n");
               DatabaseHelper.instance.logNotification(
@@ -549,13 +543,10 @@ class BackgroundService {
               lastNotificationTime[chargerViewModel.id!] =
                   now.millisecondsSinceEpoch ~/ 1000;
               intervalTime[chargerViewModel.id!] = meterInterval;
-
-              print("Step 11 end for : ${chargerViewModel.id}\n");
             }
           } else {
             print("Step 3 for : ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
-            print("Step 3 end for : ${chargerViewModel.id}\n");
           }
           break;
 
@@ -656,7 +647,6 @@ class BackgroundService {
                 "", "", "", "", randomTime[chargerViewModel.id!], 1);
             await DatabaseHelper.instance
                 .deleteNotificationLog(chargerViewModel.id!);
-            print("Step 13 end for : ${chargerViewModel.id}\n");
 
             print("Step 14 for : ${chargerViewModel.id}\n");
             String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
@@ -674,7 +664,6 @@ class BackgroundService {
                 }
               ]
             });
-            print("Step 14 end for : ${chargerViewModel.id}\n");
 
             print("Step 15 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
@@ -686,7 +675,6 @@ class BackgroundService {
                 "",
                 randomTime[chargerViewModel.id!],
                 1);
-            print("Step 15 end for : ${chargerViewModel.id}\n");
 
             print("Step 16 for : ${chargerViewModel.id}\n");
             timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
@@ -711,7 +699,7 @@ class BackgroundService {
                 .updateChargingStatus(chargerViewModel.id!, "N/A");
             await DatabaseHelper.instance
                 .updateChargerStatus(chargerViewModel.id!, "2");
-            print("Step 16 end for : ${chargerViewModel.id}\n");
+
             print("Step 17 for : ${chargerViewModel.id}\n");
             await stopTransaction(
                 chargerViewModel.id!,
@@ -730,7 +718,6 @@ class BackgroundService {
             await DatabaseHelper.instance
                 .removeChargerId(chargerViewModel.id!, "");
 
-            print("Step 17 end for : ${chargerViewModel.id}\n");
             print("Step 2 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(chargerViewModel.id!,
                 "StatusNotification", "Available", "", "", "", 0, 0);
