@@ -335,15 +335,16 @@ class BackgroundService {
             numberOfCharge[chargerViewModel.id!] = int.parse(card.times);
             numberOfChargeDays[chargerViewModel.id!] =
                 int.parse(card.daysUntil);
+
+            if (force != 1) {
+              Random random = Random();
+              int min = 10;
+              // Generate a random number within the range
+              int preparingInterval =
+                  min + random.nextInt(meterInterval - min + 1);
+              await Future.delayed(Duration(seconds: preparingInterval));
+            }
             force = 0;
-
-            Random random = Random();
-            int min = 10;
-            // Generate a random number within the range
-            int preparingInterval =
-                min + random.nextInt(meterInterval - min + 1);
-            await Future.delayed(Duration(seconds: preparingInterval));
-
             print("Step 4 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
                 chargerViewModel.id!,
