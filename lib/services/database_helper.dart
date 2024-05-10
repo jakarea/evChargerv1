@@ -3,6 +3,7 @@ import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/models/smtp_view_model.dart';
 import 'package:ev_charger/views/widgets/dialog/custom_info_bar.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -23,6 +24,7 @@ class DatabaseHelper {
 
   // The single instance of DatabaseHelper.
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+  final Logger log = Logger();
 
   // The database instance.
   Database? _database;
@@ -477,14 +479,33 @@ class DatabaseHelper {
       int chargerId, String chargingStatus) async {
     // print("chargingStatus status: $chargingStatus for $chargerId");
     Database db = await instance.database;
-
     final SessionController sessionController = Get.find<SessionController>();
-    await db.update(
-      'chargers',
-      {'charging_status': chargingStatus}, // Values to update
-      where: 'id = ?', // Condition to find the right row
-      whereArgs: [chargerId], // Values for where condition
-    );
+
+    final List<Map<String, dynamic>> rows = await db.rawQuery('''
+    SELECT charging_status,charge_box_serial_number FROM chargers WHERE id = ? LIMIT 1
+  ''', [chargerId]);
+
+    log.i("chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
+
+    if (rows.isNotEmpty) {
+      if(rows.first['charging_status'] == 'waiting'){
+        if(chargingStatus != 'start'){
+          await db.update(
+            'chargers',
+            {'charging_status': chargingStatus}, // Values to update
+            where: 'id = ?', // Condition to find the right row
+            whereArgs: [chargerId], // Values for where condition
+          );
+        }
+      }else {
+        await db.update(
+          'chargers',
+          {'charging_status': chargingStatus}, // Values to update
+          where: 'id = ?', // Condition to find the right row
+          whereArgs: [chargerId], // Values for where condition
+        );
+      }
+    }
 
     sessionController.addAllChargers();
   }
@@ -747,11 +768,10 @@ class DatabaseHelper {
   Future<void> removeChargerId(int chargerId, String newChargerId) async {
     Database db = await instance.database;
     // Proceed with the update if the charger_id is either unique or an empty string
-    // print('$newChargerId chargerID updated successfully for');
     await db.update(
       'cards', // Table name
       {'charger_id': newChargerId}, // Values to update
-      where: 'id = ?', // Condition to find the right row
+      where: 'charger_id = ?', // Condition to find the right row
       whereArgs: [chargerId], // Values for where condition
     );
   }
@@ -760,12 +780,19 @@ class DatabaseHelper {
     Database db = await instance.database;
     // Proceed with the update if the charger_id is either unique or an empty string
     // print('$newChargerId chargerID updated successfully for');
-    await db.update(
-      'cards', // Table name
-      {'charger_id': newChargerId}, // Values to update
-      where: 'id = ?', // Condition to find the right row
-      whereArgs: [cardId], // Values for where condition
-    );
+    final List<Map<String, dynamic>> rows = await db.rawQuery('''
+    SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
+  ''', [newChargerId]);
+
+    log.i("cardID $cardId $newChargerId  #### ");
+    if(rows.isEmpty){
+        await db.update(
+          'cards', // Table name
+          {'charger_id': newChargerId}, // Values to update
+          where: 'id = ?', // Condition to find the right row
+          whereArgs: [cardId], // Values for where condition
+        );
+    }
   }
 
   ///.......................notification log...................///
@@ -974,7 +1001,7 @@ class DatabaseHelper {
   ///....................receiver email......................
 
   /// Retrieve all sessions
-  Future<List<Map<String, Object?>>> getSessions() async {
+  Future<List<Map<String, dynamic>>> getSessions() async {
     Database db = await DatabaseHelper.instance.database;
     return await db.rawQuery('''
       SELECT *
