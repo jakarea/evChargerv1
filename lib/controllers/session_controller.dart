@@ -46,7 +46,7 @@ class SessionController extends GetxController {
   Future<void> removeSessionByChargerId(String chargerId) async {
     await DatabaseHelper.instance.deleteSession(int.parse(chargerId));
     /*await DatabaseHelper.instance
-        .updateChargingStatus(int.parse(chargerId), "stopping");*/
+        .updateChargingStatus(int.parse(chargerId), "waiting", 1);*/
     sessions.removeWhere((session) => session.chargerId == chargerId);
   }
 

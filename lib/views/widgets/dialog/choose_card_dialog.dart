@@ -109,7 +109,7 @@ class _ChooseCardDialogState extends State<ChooseCardDialog> {
               // await DatabaseHelper.instance.updateTimeField(selectedCard!.id!,
               //     (DateTime.now().millisecondsSinceEpoch ~/ 1000).toInt());
               await DatabaseHelper.instance
-                  .updateChargingStatus(int.parse(widget.chargerId), "waiting");
+                  .updateChargingStatus(int.parse(widget.chargerId), "waiting",0);
               BackgroundService().startChargingImmediately(
                   int.parse(widget.chargerId), selectedCard!.id!);
               widget.onBack();
