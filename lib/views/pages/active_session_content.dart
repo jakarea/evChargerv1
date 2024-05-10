@@ -121,113 +121,99 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
               ),
             ),
             Expanded(
-              child: FutureBuilder<List<ActiveSessionModel>>(
-                future:
-                    getAllSessions(), // Replace with your future function to fetch session data
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // While data is loading
-                    return Text('loading: ${snapshot.error}');
-                  } else if (snapshot.hasError) {
-                    // If there's an error
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    // If data is loaded successfully
-                    final sessionData = snapshot.data!;
-                    return ListView.builder(
-                      itemCount: sessionData.length,
-                      itemBuilder: (context, index) {
-                        final session = sessionData[index];
-                        return Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            border:
-                                Border.all(color: Colors.grey.withOpacity(0.4)),
+              child: Obx(() =>
+                ListView.builder(
+                  itemCount: sessionController.sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = sessionController.sessions[index];
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        border:
+                        Border.all(color: Colors.grey.withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              session.serialBox,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  session.serialBox,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  session.cardNumber,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  session.msp,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  session.uid,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: FutureBuilder<String>(
-                                  future:
-                                      formatDate(session.transactionSession),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      // While data is loading
-                                      return const Text("null");
-                                    } else if (snapshot.hasError) {
-                                      // If there's an error
-                                      return Text('Error: ${snapshot.error}');
-                                    } else {
-                                      // If data is loaded successfully
-                                      return ChildText(data: snapshot.data!);
-                                    }
-                                  },
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  (double.parse(session.kwh) /
-                                          60 *
-                                          double.parse(session.sessionTime) /
-                                          60)
-                                      .toStringAsFixed(3),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  "${(int.parse(session.sessionTime) / 60).round()} min",
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              Expanded(
-                                child: Button(
-                                  onPressed: () {
-                                    stopDialog(context, session);
-                                  },
-                                  child: Text(
-                                    'Stop',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: ButtonStyle(
-                                    backgroundColor:
-                                        ButtonState.all(Colors.red),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Expanded(
+                            child: Text(
+                              session.cardNumber,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                        );
-                      },
+                          Expanded(
+                            child: Text(
+                              session.msp,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              session.uid,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Expanded(
+                            child: FutureBuilder<String>(
+                              future:
+                              formatDate(session.transactionSession),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  // While data is loading
+                                  return const Text("null");
+                                } else if (snapshot.hasError) {
+                                  // If there's an error
+                                  return Text('Error: ${snapshot.error}');
+                                } else {
+                                  // If data is loaded successfully
+                                  return ChildText(data: snapshot.data!);
+                                }
+                              },
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              (double.parse(session.kwh) /
+                                  60 *
+                                  double.parse(session.sessionTime) /
+                                  60)
+                                  .toStringAsFixed(3),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              "${(int.parse(session.sessionTime) / 60).round()} min",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Expanded(
+                            child: Button(
+                              onPressed: () {
+                                stopDialog(context, session);
+                              },
+                              child: Text(
+                                'Stop',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ButtonStyle(
+                                backgroundColor:
+                                ButtonState.all(Colors.red),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     );
-                  }
-                },
-              ),
+                  },
+                )
+              )
             )
           ],
         ));
