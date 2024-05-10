@@ -11,6 +11,7 @@ import 'package:ev_charger/services/smtp_service.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'dart:io';
+import 'package:logger/logger.dart';
 
 // import 'package:connectivity/connectivity.dart';
 import 'package:http/http.dart' as http;
@@ -67,6 +68,7 @@ class BackgroundService {
   List<String> startTime = List.filled(900,
       DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(DateTime.now()).toString());
   static const Duration delayDuration = Duration(seconds: 3);
+  final Logger logger = Logger();
 
   factory BackgroundService() {
     return _instance;
@@ -132,7 +134,7 @@ class BackgroundService {
   }
 
   void stopChargingImmediately(chargerId) async {
-    // print(chargerState[chargerId!]);
+    // logger.i(chargerState[chargerId!]);
     DateTime utcNow = DateTime.now().toUtc();
     String sign = timeZone.substring(3, 4);
     int hours = int.parse(timeZone.substring(4, 6));
@@ -161,7 +163,7 @@ class BackgroundService {
     ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
     chargerState[charger.id!] = 'heartbeat';
     await DatabaseHelper.instance.updateTime(chargerId, 15);
-    // print("startChargingImmediately 163\n");
+    // logger.i("startChargingImmediately 163\n");
   }
 
   int getRandomSessionRestTime(int numberOfSession, int days, int lastSession) {
@@ -188,7 +190,7 @@ class BackgroundService {
     Timer.periodic(const Duration(seconds: 15), (Timer t) async {
       // await DatabaseHelper.instance.updateTimeField(1, 1715171584);
       // await DatabaseHelper.instance.updateTimeField(2, 1715171784);
-      // print(126);
+      // logger.i(126);
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
@@ -249,13 +251,13 @@ class BackgroundService {
     final SessionController sessionController = Get.find<SessionController>();
 
     await connectToWebSocket(charger.urlToConnect!, charger.id!).then((_) {
-      // print(charger.urlToConnect);
-      // print('WebSocket connection hello established: 168');
-      // print(charger.id);
+      // logger.i(charger.urlToConnect);
+      // logger.i('WebSocket connection hello established: 168');
+      // logger.i(charger.id);
     }).catchError((error) {
-      // print('Error establishing WebSocket connection 282: $error');
+      // logger.i('Error establishing WebSocket connection 282: $error');
     });
-    //  print('Step 1 BootNotification for newly added charger');
+    //  logger.i('Step 1 BootNotification for newly added charger');
     // BootNotification for newly added charger
     await sendBootNotification(charger);
     chargerState[charger.id!] = 'heartbeat';
@@ -280,7 +282,7 @@ class BackgroundService {
       switch (currentState) {
         case 'heartbeat':
           await DatabaseHelper.instance
-              .updateChargingStatus(chargerViewModel.id!, "start");
+              .updateChargingStatus(chargerViewModel.id!, "start",0);
 
           Map<String, dynamic>? cardData = await DatabaseHelper.instance
               .getCardByGroupAndTime(chargerViewModel.groupId!);
@@ -345,7 +347,7 @@ class BackgroundService {
               await Future.delayed(Duration(seconds: preparingInterval));
             }
             force = 0;
-            print("Step 4 for : ${chargerViewModel.id}\n");
+            logger.i("Step 4 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
                 chargerViewModel.id!,
                 "StatusNotification",
@@ -355,9 +357,9 @@ class BackgroundService {
                 "",
                 randomTime[chargerViewModel.id!],
                 1);
-            print("Step 4 end for : ${chargerViewModel.id}\n");
+            logger.i("Step 4 end for : ${chargerViewModel.id}\n");
 
-            print("Step 5 for : ${chargerViewModel.id}\n");
+            logger.i("Step 5 for : ${chargerViewModel.id}\n");
             int detectionDelay = Random().nextInt(12) + 2;
             await Future.delayed(Duration(seconds: detectionDelay));
             await sendStatusNotification(
@@ -370,7 +372,7 @@ class BackgroundService {
                 randomTime[chargerViewModel.id!],
                 1);
 
-            print("Step 6 for : ${chargerViewModel.id}\n");
+            logger.i("Step 6 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
                 chargerViewModel.id!,
                 "AuthorizeNotification",
@@ -380,7 +382,7 @@ class BackgroundService {
                 "",
                 randomTime[chargerViewModel.id!],
                 1);
-            print("Step 6 end for : ${chargerViewModel.id}\n");
+            logger.i("Step 6 end for : ${chargerViewModel.id}\n");
             //You can now use 'card' safely within this block.
 
             detectionDelay = Random().nextInt(3);
@@ -418,10 +420,10 @@ class BackgroundService {
               await sendHeartbeat(chargerViewModel.id!);
               chargerState[chargerViewModel.id!] = 'heartbeat';
             } else {
-              print("Step 7 for : ${chargerViewModel.id}\n");
+              logger.i("Step 7 for : ${chargerViewModel.id}\n");
 
               await DatabaseHelper.instance
-                  .updateChargingStatus(chargerViewModel.id!, "Charging");
+                  .updateChargingStatus(chargerViewModel.id!, "Charging",0);
               await DatabaseHelper.instance
                   .updateChargerStatus(chargerViewModel.id!, "1");
 
@@ -438,7 +440,7 @@ class BackgroundService {
               await sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
                   "", "", "", "", randomTime[chargerViewModel.id!], 1);
 
-              print("Step 8  for : ${chargerViewModel.id}\n");
+              logger.i("Step 8  for : ${chargerViewModel.id}\n");
               detectionDelay = Random().nextInt(3);
               await delayInSeconds(detectionDelay);
               await startTransaction(chargerViewModel.id!, card.uid,
@@ -476,7 +478,7 @@ class BackgroundService {
                   kwh: randomKw[chargerViewModel.id!].toString(),
                   sessionTime: randomTime[chargerViewModel.id!].toString()));
 
-              print("Step 9 for : ${chargerViewModel.id}\n");
+              logger.i("Step 9 for : ${chargerViewModel.id}\n");
 
               await sendMeterValues(chargerViewModel.id!, {
                 "timestamp": "${timestamp}",
@@ -493,7 +495,7 @@ class BackgroundService {
               detectionDelay = Random().nextInt(2);
               await delayInSeconds(detectionDelay);
 
-              print("Step 10 for : ${chargerViewModel.id}\n");
+              logger.i("Step 10 for : ${chargerViewModel.id}\n");
               utcNow = DateTime.now().toUtc();
               sign = timeZone.substring(3, 4);
               hours = int.parse(timeZone.substring(4, 6));
@@ -518,7 +520,7 @@ class BackgroundService {
                 ]
               });
 
-              print("Step 11 for : ${chargerViewModel.id}\n");
+              logger.i("Step 11 for : ${chargerViewModel.id}\n");
               DatabaseHelper.instance.logNotification(
                   messageId: messageId[chargerViewModel.id!],
                   chargerId: chargerViewModel.id!,
@@ -546,7 +548,7 @@ class BackgroundService {
               intervalTime[chargerViewModel.id!] = meterInterval;
             }
           } else {
-            print("Step 3 for : ${chargerViewModel.id}\n");
+            logger.i("Step 3 for : ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
           }
           break;
@@ -563,7 +565,7 @@ class BackgroundService {
 
           if (sessionEndTime[chargerViewModel.id!] >=
               (now.millisecondsSinceEpoch ~/ 1000)) {
-            print("Step 12 for : ${chargerViewModel.id}\n");
+            logger.i("Step 12 for : ${chargerViewModel.id}\n");
 
             nowTime = now.millisecondsSinceEpoch ~/ 1000;
             lastNotificationTimeDiff[chargerViewModel.id!] =
@@ -627,7 +629,7 @@ class BackgroundService {
                   min + random.nextInt(max - min + 1);
             }
           } else {
-            print("Step 13 for : ${chargerViewModel.id}\n");
+            logger.i("Step 13 for : ${chargerViewModel.id}\n");
             DateTime utcNow = DateTime.now().toUtc();
             String sign = timeZone.substring(3, 4);
             int hours = int.parse(timeZone.substring(4, 6));
@@ -649,7 +651,7 @@ class BackgroundService {
             await DatabaseHelper.instance
                 .deleteNotificationLog(chargerViewModel.id!);
 
-            print("Step 14 for : ${chargerViewModel.id}\n");
+            logger.i("Step 14 for : ${chargerViewModel.id}\n");
             String timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
 
             await sendMeterValues(chargerViewModel.id!, {
@@ -666,7 +668,7 @@ class BackgroundService {
               ]
             });
 
-            print("Step 15 for : ${chargerViewModel.id}\n");
+            logger.i("Step 15 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(
                 chargerViewModel.id!,
                 "StatusNotification",
@@ -677,7 +679,7 @@ class BackgroundService {
                 randomTime[chargerViewModel.id!],
                 1);
 
-            print("Step 16 for : ${chargerViewModel.id}\n");
+            logger.i("Step 16 for : ${chargerViewModel.id}\n");
             timestamp = DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(now);
 
             await sendMeterValues(chargerViewModel.id!, {
@@ -697,11 +699,11 @@ class BackgroundService {
 // TODO:
 
             await DatabaseHelper.instance
-                .updateChargingStatus(chargerViewModel.id!, "N/A");
+                .updateChargingStatus(chargerViewModel.id!, "N/A",0);
             await DatabaseHelper.instance
                 .updateChargerStatus(chargerViewModel.id!, "2");
 
-            print("Step 17 for : ${chargerViewModel.id}\n");
+            logger.i("Step 17 for : ${chargerViewModel.id}\n");
             await stopTransaction(
                 chargerViewModel.id!,
                 beginMeterValue[chargerViewModel.id!],
@@ -719,14 +721,14 @@ class BackgroundService {
             await DatabaseHelper.instance
                 .removeChargerId(chargerViewModel.id!, "");
 
-            print("Step 2 for : ${chargerViewModel.id}\n");
+            logger.i("Step 2 for : ${chargerViewModel.id}\n");
             await sendStatusNotification(chargerViewModel.id!,
                 "StatusNotification", "Available", "", "", "", 0, 0);
             // Delay for 1 second
             await Future.delayed(delayDuration);
             await sendStatusNotification(chargerViewModel.id!,
                 "StatusNotification", "Available", "", "", "", 0, 1);
-            print("Step 2 end for : ${chargerViewModel.id}\n");
+            logger.i("Step 2 end for : ${chargerViewModel.id}\n");
             chargerState[chargerViewModel.id!] = 'heartbeat';
           }
 
@@ -768,7 +770,7 @@ class BackgroundService {
       channel.stream.listen((data) async {
         // Decode the incoming JSON data
         dynamic decodedData = jsonDecode(data);
-        print("Received: ${decodedData}\n");
+        logger.i("Received: ${decodedData}\n");
         if (decodedData[0] != 3) {
           await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
         }
@@ -794,19 +796,19 @@ class BackgroundService {
           }
         }
       }, onDone: () {
-        print(
+        logger.i(
             '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
         _isConnected = false;
         _retryConnection(url, chargerId);
       }, onError: (error) {
-        print('$chargerId Error in WebSocket connection: $error\n');
+        logger.i('$chargerId Error in WebSocket connection: $error\n');
         _isConnected = false;
         _retryConnection(url, chargerId);
       });
       _sockets[chargerId] = channel;
       _isConnected = true;
     } catch (e) {
-      print(e);
+      logger.i(e);
     }
   }
 
@@ -819,7 +821,7 @@ class BackgroundService {
 
   Future<void> sendMessage(String message, int? chargerId) async {
     if (_sockets[chargerId!] != null) {
-      print("Sent: ${message}\n");
+      logger.i("Sent: ${message}\n");
 
       _sockets[chargerId]?.sink.add(message);
     } else {
@@ -828,7 +830,7 @@ class BackgroundService {
   }
 
   Future<void> sendBootNotification(ChargersViewModel charger) async {
-    print("Step 1 for : ${charger.id}\n");
+    logger.i("Step 1 for : ${charger.id}\n");
     int? chargerId = charger.id;
 
     var log = await DatabaseHelper.instance.getNotificationLog("$chargerId");
@@ -850,11 +852,11 @@ class BackgroundService {
       //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
-      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A");
+      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A",0);
       await DatabaseHelper.instance.removeChargerId(charger.id!, "");
 
       await sendMessage(bootNotification, charger.id);
-      print("Step 1 end for : ${charger.id}\n");
+      logger.i("Step 1 end for : ${charger.id}\n");
 
       await DatabaseHelper.instance
           .updateTime(charger.id!, int.parse(charger.intervalTime!));

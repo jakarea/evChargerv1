@@ -476,7 +476,7 @@ class DatabaseHelper {
   }
 
   Future<void> updateChargingStatus(
-      int chargerId, String chargingStatus) async {
+      int chargerId, String chargingStatus, int stop) async {
     // print("chargingStatus status: $chargingStatus for $chargerId");
     Database db = await instance.database;
     final SessionController sessionController = Get.find<SessionController>();
@@ -486,7 +486,7 @@ class DatabaseHelper {
   ''', [chargerId]);
 
     log.i("chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
-
+    log.t("stop data $stop");
     if (rows.isNotEmpty) {
       if(rows.first['charging_status'] == 'waiting'){
         if(chargingStatus != 'start'){
