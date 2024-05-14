@@ -56,9 +56,12 @@ class BackgroundService {
   List<double> beginMeterValue = List.filled(900, 0);
   List<int> lastNotificationTime = List.filled(900, 0);
   List<int> lastNotificationTimeDiff = List.filled(900, 0);
+  List<int> timerToPing = List.filled(100, 0);
   List<double> lastMeterValue = List.filled(900, 0);
   List<double> sumKwh = List.filled(900, 0);
   int force = 0;
+  Map<int, ChargerData> chargerData = {};
+
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
   bool _isConnected = false;
@@ -183,14 +186,34 @@ class BackgroundService {
     return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
   }
 
+// Function to add a new charger with initial time = 0 and URL
+  void acquireCharger(int chargerId, String url) {
+    chargerData[chargerId] = ChargerData(time: 0, url: url);
+  }
+
+  void updateChargerTime() {
+    chargerData.forEach((chargerId, data) {
+      if (data.time == 4) {
+        resetChargerTime(chargerId);
+        // Call another function here
+        connectToWebSocket(data.url, chargerId);
+        logger.i("Charger $chargerId reconnection to ${data.url}.");
+      } else {
+        data.time++;
+      }
+    });
+  }
+
+  // Function to reset charger time to 0
+  void resetChargerTime(int chargerId) {
+    chargerData[chargerId]!.time = 0;
+  }
+
   void startPeriodicTask() async {
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     bool isConnected = true;
-    Timer.periodic(const Duration(seconds: 15), (Timer t) async {
-      // await DatabaseHelper.instance.updateTimeField(1, 1715171584);
-      // await DatabaseHelper.instance.updateTimeField(2, 1715171784);
-      // logger.i(126);
+    Timer.periodic(const Duration(seconds: 10), (Timer t) async {
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
@@ -199,19 +222,13 @@ class BackgroundService {
         decideNextTimezoneChangerDate();
       }
 
-      String sign = timeZone.substring(3, 4); // Extracting the sign (+ or -)
-      int hours = int.parse(timeZone.substring(4, 6)); // Extracting the hours
-      int minutes = int.parse(timeZone.substring(7)); // Extracting the minutes
-      int totalOffsetMinutes = (hours * 60 + minutes);
-      DateTime now = utcNow.add(Duration(
-          minutes: sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
-
-      if (time >= 5) {
+      if (time >= 30) {
         isConnected = await checkInternetConnection();
         time = 0;
         timeZone = await DatabaseHelper.instance.getUtcTime();
       }
 
+      updateChargerTime();
       if (isConnected) {
         await checkAndUpdateDatabase();
       }
@@ -282,7 +299,7 @@ class BackgroundService {
       switch (currentState) {
         case 'heartbeat':
           await DatabaseHelper.instance
-              .updateChargingStatus(chargerViewModel.id!, "start",0);
+              .updateChargingStatus(chargerViewModel.id!, "start", 0);
 
           Map<String, dynamic>? cardData = await DatabaseHelper.instance
               .getCardByGroupAndTime(chargerViewModel.groupId!);
@@ -423,7 +440,7 @@ class BackgroundService {
               logger.i("Step 7 for : ${chargerViewModel.id}\n");
 
               await DatabaseHelper.instance
-                  .updateChargingStatus(chargerViewModel.id!, "Charging",0);
+                  .updateChargingStatus(chargerViewModel.id!, "Charging", 0);
               await DatabaseHelper.instance
                   .updateChargerStatus(chargerViewModel.id!, "1");
 
@@ -699,7 +716,7 @@ class BackgroundService {
 // TODO:
 
             await DatabaseHelper.instance
-                .updateChargingStatus(chargerViewModel.id!, "N/A",0);
+                .updateChargingStatus(chargerViewModel.id!, "N/A", 0);
             await DatabaseHelper.instance
                 .updateChargerStatus(chargerViewModel.id!, "2");
 
@@ -830,6 +847,7 @@ class BackgroundService {
   }
 
   Future<void> sendBootNotification(ChargersViewModel charger) async {
+    acquireCharger(charger.id!, charger.urlToConnect!);
     logger.i("Step 1 for : ${charger.id}\n");
     int? chargerId = charger.id;
 
@@ -852,7 +870,7 @@ class BackgroundService {
       //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
-      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A",0);
+      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A", 0);
       await DatabaseHelper.instance.removeChargerId(charger.id!, "");
 
       await sendMessage(bootNotification, charger.id);
@@ -1045,4 +1063,11 @@ class BackgroundService {
     await sendMessage(stopTransaction, chargerId);
     DatabaseHelper.instance.deleteNotificationLog(chargerId);
   }
+}
+
+class ChargerData {
+  int time;
+  String url;
+
+  ChargerData({required this.time, required this.url});
 }
