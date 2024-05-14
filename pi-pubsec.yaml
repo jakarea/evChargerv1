@@ -39,7 +39,6 @@ dependencies:
   shared_preferences: ^2.2.2
   provider: ^6.1.2
   mailer: ^6.1.0
-  logger: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -88,3 +87,6 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+
+
