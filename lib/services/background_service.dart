@@ -192,12 +192,15 @@ class BackgroundService {
   }
 
   void updateChargerTime() {
-    chargerData.forEach((chargerId, data) {
+    chargerData.forEach((chargerId, data) async {
+      logger.t("chargerTimerData@@@@@@@@ chargerID=$chargerId  ${data.time}");
       if (data.time == 4) {
         resetChargerTime(chargerId);
         // Call another function here
-        connectToWebSocket(data.url, chargerId);
-        logger.i("Charger $chargerId reconnection to ${data.url}.");
+        if(await checkInternetConnection()){
+          connectToWebSocket(data.url, chargerId);
+          logger.t("Charger $chargerId reconnection to ${data.url}.");
+        }
       } else {
         data.time++;
       }
@@ -816,11 +819,11 @@ class BackgroundService {
         logger.e(
             '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
         _isConnected = false;
-        // _retryConnection(url, chargerId);
+        //_retryConnection(url, chargerId);
       }, onError: (error) {
         logger.e('$chargerId Error in WebSocket connection: $error\n');
         _isConnected = false;
-        // _retryConnection(url, chargerId);
+        //_retryConnection(url, chargerId);
       });
       _sockets[chargerId] = channel;
       _isConnected = true;
