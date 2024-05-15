@@ -813,14 +813,14 @@ class BackgroundService {
           }
         }
       }, onDone: () {
-        logger.i(
+        logger.e(
             '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
         _isConnected = false;
-        _retryConnection(url, chargerId);
+        // _retryConnection(url, chargerId);
       }, onError: (error) {
-        logger.i('$chargerId Error in WebSocket connection: $error\n');
+        logger.e('$chargerId Error in WebSocket connection: $error\n');
         _isConnected = false;
-        _retryConnection(url, chargerId);
+        // _retryConnection(url, chargerId);
       });
       _sockets[chargerId] = channel;
       _isConnected = true;
