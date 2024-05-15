@@ -199,7 +199,7 @@ class BackgroundService {
         // Call another function here
         if(await checkInternetConnection()){
           connectToWebSocket(data.url, chargerId);
-          logger.t("Charger $chargerId reconnection to ${data.url}.");
+          //logger.t("Charger $chargerId reconnection to ${data.url}.");
         }
       } else {
         data.time++;
@@ -416,6 +416,12 @@ class BackgroundService {
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
               var cardNumber = card.cardNumber;
               var msp = card.msp;
+
+              /**updating charger status*/
+              await DatabaseHelper.instance
+                  .updateChargingStatus(chargerViewModel.id!, "Start", -1);
+              await DatabaseHelper.instance
+                  .updateChargerStatus(chargerViewModel.id!, "0");
 
               SmtpService.sendEmail(
                   subject: 'Card Blocked',
@@ -816,12 +822,12 @@ class BackgroundService {
           }
         }
       }, onDone: () {
-        logger.e(
-            '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
+        // logger.e(
+        //     '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
         _isConnected = false;
         //_retryConnection(url, chargerId);
       }, onError: (error) {
-        logger.e('$chargerId Error in WebSocket connection: $error\n');
+        // logger.e('$chargerId Error in WebSocket connection: $error\n');
         _isConnected = false;
         //_retryConnection(url, chargerId);
       });
