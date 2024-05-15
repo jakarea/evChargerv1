@@ -497,6 +497,16 @@ class DatabaseHelper {
             whereArgs: [chargerId], // Values for where condition
           );
         }
+
+        log.i("charger stop##### $stop");
+        if(stop == -1){
+          await db.update(
+            'chargers',
+            {'charging_status': chargingStatus}, // Values to update
+            where: 'id = ?', // Condition to find the right row
+            whereArgs: [chargerId], // Values for where condition
+          );
+        }
       }else {
         await db.update(
           'chargers',
