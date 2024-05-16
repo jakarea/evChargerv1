@@ -408,9 +408,11 @@ class BackgroundService {
             detectionDelay = Random().nextInt(3);
             await delayInSeconds(detectionDelay);
 
+            logger.i("response status ${responseStatus[chargerViewModel.id!]}");
             // ignore: unrelated_type_equality_checks
             if (responseStatus[chargerViewModel.id!] == 'Blocked' ||
                 responseStatus[chargerViewModel.id!] == 'Invalid') {
+              logger.i("updating response status ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
               var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
@@ -811,6 +813,7 @@ class BackgroundService {
           }
 
           String status = '';
+          logger.t("decoded info ${decodedData[2]}");
 
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('idTagInfo') &&
@@ -819,6 +822,7 @@ class BackgroundService {
             // Extract the status from idTagInfo
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
+            logger.t("decoded status ${responseStatus[chargerId]}");
           }
         }
       }, onDone: () {
