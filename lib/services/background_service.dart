@@ -883,7 +883,7 @@ class BackgroundService {
       //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
-      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "N/A", 0);
+      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "start", 0);
       await DatabaseHelper.instance.removeChargerId(charger.id!, "");
 
       await sendMessage(bootNotification, charger.id);
