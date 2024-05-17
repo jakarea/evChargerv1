@@ -159,9 +159,11 @@ class BackgroundService {
         isConnected = true;
         return true;
       } else {
+        isConnected = false;
         return false;
       }
     } catch (e) {
+      isConnected = false;
       return false;
     }
   }
@@ -850,9 +852,8 @@ class BackgroundService {
           }
 
           /**checking index 2 and its status for stopChargingImmediately*/
-          if ((decodedData[2] as Map).isEmpty ||
-              decodedData[2]['status'] != "Accepted") {
-            stopChargingImmediately(chargerId);
+          if ((decodedData[2] as Map).isEmpty) {
+            //stopChargingImmediately(chargerId);
           }
         }
       }, onDone: () {

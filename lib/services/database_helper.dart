@@ -792,7 +792,7 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ");
+    log.i("cardID $cardId $newChargerId  #### ${rows.length}");
     if(rows.isEmpty){
         await db.update(
           'cards', // Table name
