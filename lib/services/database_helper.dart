@@ -497,7 +497,7 @@ class DatabaseHelper {
             whereArgs: [chargerId], // Values for where condition
           );
         }else if(stop == -1){
-          log.e("charger blocked   #### ${rows.first['charge_box_serial_number']} ");
+          log.e("charger stopped   #### ${rows.first['charge_box_serial_number']} ");
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update

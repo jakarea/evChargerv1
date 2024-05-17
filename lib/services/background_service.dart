@@ -64,7 +64,8 @@ class BackgroundService {
 
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
-  bool _isConnected = false;
+  bool _socketConnected = false;
+  bool isConnected = false;
 
   Map<String, dynamic>? forceCardData;
   Map<String, dynamic>? forceCharger;
@@ -78,6 +79,7 @@ class BackgroundService {
   }
 
   BackgroundService._internal() {
+    checkInternetConnection();
     startPeriodicTask();
     decideNextTimezoneChangerDate();
     _sockets = List.filled(100, null);
@@ -153,19 +155,33 @@ class BackgroundService {
   Future<bool> checkInternetConnection() async {
     try {
       final response = await http.get(Uri.parse('https://www.google.com'));
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        isConnected = true;
+        return true;
+      } else {
+        return false;
+      }
     } catch (e) {
       return false;
     }
   }
 
   void startChargingImmediately(int chargerId, int cardId) async {
-    force = 1;
-    forceCharger = await DatabaseHelper.instance.getChargerById(chargerId);
-    forceCardData = await DatabaseHelper.instance.getCardById(cardId);
-    ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
-    chargerState[charger.id!] = 'heartbeat';
-    await DatabaseHelper.instance.updateTime(chargerId, 15);
+    isConnected = await checkInternetConnection();
+    logger.e("is connected internet $isConnected");
+    if (isConnected) {
+      force = 1;
+      forceCharger = await DatabaseHelper.instance.getChargerById(chargerId);
+      forceCardData = await DatabaseHelper.instance.getCardById(cardId);
+      ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
+      chargerState[charger.id!] = 'heartbeat';
+      await DatabaseHelper.instance.updateTime(chargerId, 15);
+    } else {
+      await DatabaseHelper.instance.updateChargerId(cardId, '');
+      await DatabaseHelper.instance
+          .updateChargingStatus(chargerId, "start", -1);
+    }
+
     // logger.i("startChargingImmediately 163\n");
   }
 
@@ -197,7 +213,7 @@ class BackgroundService {
       if (data.time == 4) {
         resetChargerTime(chargerId);
         // Call another function here
-        if(await checkInternetConnection()){
+        if (await checkInternetConnection()) {
           connectToWebSocket(data.url, chargerId);
           //logger.t("Charger $chargerId reconnection to ${data.url}.");
         }
@@ -215,8 +231,8 @@ class BackgroundService {
   void startPeriodicTask() async {
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
-    bool isConnected = true;
-    Timer.periodic(const Duration(seconds: 10), (Timer t) async {
+    //isConnected = true;
+    Timer.periodic(const Duration(seconds: 15), (Timer t) async {
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
@@ -225,12 +241,12 @@ class BackgroundService {
         decideNextTimezoneChangerDate();
       }
 
-      if (time >= 30) {
-        isConnected = await checkInternetConnection();
+      if (time >= 12) {
+        await checkInternetConnection();
         time = 0;
         timeZone = await DatabaseHelper.instance.getUtcTime();
       }
-
+      logger.i("startPeriodicTask() checking internet $isConnected");
       updateChargerTime();
       if (isConnected) {
         await checkAndUpdateDatabase();
@@ -311,7 +327,9 @@ class BackgroundService {
             cardData = forceCardData;
           }
 
-          if (cardData != null) {
+          logger.e("case heartbeat $isConnected $cardData");
+
+          if (cardData != null && isConnected) {
             DateTime utcNow = DateTime.now().toUtc();
             String sign = timeZone.substring(3, 4);
             int hours = int.parse(timeZone.substring(4, 6));
@@ -412,7 +430,8 @@ class BackgroundService {
             // ignore: unrelated_type_equality_checks
             if (responseStatus[chargerViewModel.id!] == 'Blocked' ||
                 responseStatus[chargerViewModel.id!] == 'Invalid') {
-              logger.i("updating response status ${responseStatus[chargerViewModel.id!]}");
+              logger.i(
+                  "updating response status ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
               var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
@@ -578,6 +597,11 @@ class BackgroundService {
           } else {
             logger.i("Step 3 for : ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
+
+            CardViewModel card = CardViewModel.fromJson(cardData!);
+            await DatabaseHelper.instance.updateChargerId(card.id!, "");
+            await DatabaseHelper.instance
+                .updateChargingStatus(chargerViewModel.id!, "start", -1);
           }
           break;
 
@@ -824,19 +848,25 @@ class BackgroundService {
             responseStatus[chargerId] = status;
             logger.t("decoded status ${responseStatus[chargerId]}");
           }
+
+          /**checking index 2 and its status for stopChargingImmediately*/
+          if ((decodedData[2] as Map).isEmpty ||
+              decodedData[2]['status'] != "Accepted") {
+            stopChargingImmediately(chargerId);
+          }
         }
       }, onDone: () {
         // logger.e(
         //     '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
-        _isConnected = false;
+        _socketConnected = false;
         //_retryConnection(url, chargerId);
       }, onError: (error) {
         // logger.e('$chargerId Error in WebSocket connection: $error\n');
-        _isConnected = false;
+        _socketConnected = false;
         //_retryConnection(url, chargerId);
       });
       _sockets[chargerId] = channel;
-      _isConnected = true;
+      _socketConnected = true;
     } catch (e) {
       logger.i(e);
     }
@@ -844,7 +874,7 @@ class BackgroundService {
 
   /*retrying websocket connection*/
   void _retryConnection(String url, int chargerId) {
-    if (!_isConnected) {
+    if (!_socketConnected) {
       connectToWebSocket(url, chargerId);
     }
   }
@@ -883,7 +913,8 @@ class BackgroundService {
       //bootNotification
       await DatabaseHelper.instance.deleteActiveSessionByChargerId(charger.id!);
       await DatabaseHelper.instance.updateChargerStatus(charger.id!, "2");
-      await DatabaseHelper.instance.updateChargingStatus(charger.id!, "start", 0);
+      await DatabaseHelper.instance
+          .updateChargingStatus(charger.id!, "start", 0);
       await DatabaseHelper.instance.removeChargerId(charger.id!, "");
 
       await sendMessage(bootNotification, charger.id);
