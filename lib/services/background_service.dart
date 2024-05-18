@@ -178,7 +178,7 @@ class BackgroundService {
       forceCardData = await DatabaseHelper.instance.getCardById(cardId);
       ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
       chargerState[charger.id!] = 'heartbeat';
-      await DatabaseHelper.instance.updateTime(chargerId, 15);
+      await DatabaseHelper.instance.updateTime(chargerId, int.parse(charger.intervalTime!));
     } else {
       await DatabaseHelper.instance.updateChargerId(cardId, '');
       await DatabaseHelper.instance
