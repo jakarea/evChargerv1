@@ -66,6 +66,7 @@ class BackgroundService {
   int nextTimezoneChange = 0;
   bool _socketConnected = false;
   bool isConnected = false;
+  bool blocked = false;
 
   Map<String, dynamic>? forceCardData;
   Map<String, dynamic>? forceCharger;
@@ -231,6 +232,9 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
+    /*await DatabaseHelper.instance
+        .deleteNotificationLog(4);*/
+
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     //isConnected = true;
@@ -428,20 +432,20 @@ class BackgroundService {
             detectionDelay = Random().nextInt(3);
             await delayInSeconds(detectionDelay);
 
-            logger.i("response status ${responseStatus[chargerViewModel.id!]}");
+            logger.i("response status ${chargerViewModel.id} ${chargerViewModel.chargeBoxSerialNumber}  ${responseStatus[chargerViewModel.id!]}");
+            logger.i("all response data ${responseStatus}");
             // ignore: unrelated_type_equality_checks
-            if (responseStatus[chargerViewModel.id!] == 'Blocked' ||
-                responseStatus[chargerViewModel.id!] == 'Invalid') {
+            if (blocked) {
               logger.i(
                   "updating response status ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
-              var uid = cardUId[chargerViewModel.id!];
+              /*var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
               var cardNumber = card.cardNumber;
-              var msp = card.msp;
+              var msp = card.msp;*/
 
               /**updating charger status*/
-              await DatabaseHelper.instance
+              /*await DatabaseHelper.instance
                   .updateChargingStatus(chargerViewModel.id!, "Start", -1);
               await DatabaseHelper.instance
                   .updateChargerStatus(chargerViewModel.id!, "0");
@@ -467,7 +471,7 @@ class BackgroundService {
                   "StatusNotification", "Available", "", "", "", 0, 1);
 
               await sendHeartbeat(chargerViewModel.id!);
-              chargerState[chargerViewModel.id!] = 'heartbeat';
+              chargerState[chargerViewModel.id!] = 'heartbeat';*/
             } else {
               logger.i("Step 7 for : ${chargerViewModel.id}\n");
 
@@ -849,6 +853,14 @@ class BackgroundService {
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
             logger.t("decoded status ${responseStatus[chargerId]}");
+            if (responseStatus[chargerId] == 'Blocked' ||
+                responseStatus[chargerId] == 'Invalid') {
+              blocked = true;
+              blockedChargerHandle(chargerId);
+            }else{
+              blocked = false;
+            }
+
           }
 
           /**checking index 2 and its status for stopChargingImmediately*/
@@ -1107,6 +1119,48 @@ class BackgroundService {
     ]);
     await sendMessage(stopTransaction, chargerId);
     DatabaseHelper.instance.deleteNotificationLog(chargerId);
+  }
+
+  Future<void> blockedChargerHandle(int chargerId) async {
+    logger.i(
+        "updating response status ${responseStatus[chargerId]}");
+    Map<String, dynamic>? cardData = await DatabaseHelper.instance
+        .getCardByChargerId(chargerId);
+    CardViewModel card = CardViewModel.fromJson(cardData!);
+    // TODO: and send mail to admin
+    var uid = cardUId[chargerId];
+    var chargeBoxNumber = chargeBoxSerialNumber[chargerId];
+    var cardNumber = card.cardNumber;
+    var msp = card.msp;
+
+    /**updating charger status*/
+    await DatabaseHelper.instance
+        .updateChargingStatus(chargerId, "Start", -1);
+    await DatabaseHelper.instance
+        .updateChargerStatus(chargerId, "0");
+
+    SmtpService.sendEmail(
+        subject: 'Card Blocked',
+        text: "$uid has blocked!",
+        headerText: "BoxSerialNumber: $chargeBoxNumber",
+        contentText: "MSP: $msp <br> Card Number: $cardNumber");
+
+    nextSession[chargerId] =
+        await getRandomSessionRestTime(
+        numberOfCharge[chargerId],
+        numberOfChargeDays[chargerId],
+        randomTime[chargerId]);
+
+    await DatabaseHelper.instance.updateTimeField(
+        cardId[chargerId],
+        nextSession[chargerId]);
+    await DatabaseHelper.instance.updateChargerId(card.id!, '');
+
+    await sendStatusNotification(chargerId,
+    "StatusNotification", "Available", "", "", "", 0, 1);
+
+    await sendHeartbeat(chargerId);
+    chargerState[chargerId] = 'heartbeat';
   }
 }
 

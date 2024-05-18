@@ -33,7 +33,7 @@ class SmtpService {
     final message = Message()
       ..from = Address(username, 'System Mail')
       ..recipients
-          .add(adminEmail ?? 'dorian@gonextlevelagency.nl') // recipient email
+          .add(adminEmail ?? 'dorian@gonextlevelagency.nl') // recipient email dorian@gonextlevelagency.nl
       ..subject = subject
       ..text = text
       ..html = "<h1>$headerText</h1>\n<p>$text</p><p>$contentText</p>";
