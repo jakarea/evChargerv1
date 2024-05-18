@@ -197,7 +197,7 @@ class BackgroundService {
       if (data.time == 4) {
         resetChargerTime(chargerId);
         // Call another function here
-        if(await checkInternetConnection()){
+        if (await checkInternetConnection()) {
           connectToWebSocket(data.url, chargerId);
           logger.t("Charger $chargerId reconnection to ${data.url}.");
         }
