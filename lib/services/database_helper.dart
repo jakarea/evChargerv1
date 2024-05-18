@@ -496,6 +496,14 @@ class DatabaseHelper {
             where: 'id = ?', // Condition to find the right row
             whereArgs: [chargerId], // Values for where condition
           );
+        }else if(stop == -1){
+          log.e("charger stopped   #### ${rows.first['charge_box_serial_number']} ");
+          await db.update(
+            'chargers',
+            {'charging_status': chargingStatus}, // Values to update
+            where: 'id = ?', // Condition to find the right row
+            whereArgs: [chargerId], // Values for where condition
+          );
         }
       }else {
         await db.update(
@@ -784,7 +792,7 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ");
+    log.i("cardID $cardId $newChargerId  #### ${rows.length}");
     if(rows.isEmpty){
         await db.update(
           'cards', // Table name
