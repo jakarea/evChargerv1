@@ -803,7 +803,7 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ${rows.length}");
+    log.i("cardID $cardId $newChargerId  #### ${rows}");
     if(rows.isEmpty){
         await db.update(
           'cards', // Table name
@@ -811,6 +811,14 @@ class DatabaseHelper {
           where: 'id = ?', // Condition to find the right row
           whereArgs: [cardId], // Values for where condition
         );
+    }
+    if(rows.isNotEmpty && newChargerId == ''){
+      await db.update(
+        'cards', // Table name
+        {'charger_id': newChargerId}, // Values to update
+        where: 'id = ?', // Condition to find the right row
+        whereArgs: [cardId], // Values for where condition
+      );
     }
   }
 
