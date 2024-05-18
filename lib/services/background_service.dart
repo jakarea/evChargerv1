@@ -33,7 +33,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 60;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -429,15 +429,15 @@ class BackgroundService {
             logger.i("Step 6 end for : ${chargerViewModel.id}\n");
             //You can now use 'card' safely within this block.
 
-            detectionDelay = Random().nextInt(3);
-            await delayInSeconds(detectionDelay);
+            detectionDelay = Random().nextInt(2);
+            await delayInSeconds(detectionDelay+1);
 
-            logger.i("response status ${chargerViewModel.id} ${chargerViewModel.chargeBoxSerialNumber}  ${responseStatus[chargerViewModel.id!]}");
+            logger.i("$blocked before if response status ${chargerViewModel.id} ${chargerViewModel.chargeBoxSerialNumber}  ${responseStatus[chargerViewModel.id!]}");
             logger.i("all response data ${responseStatus}");
             // ignore: unrelated_type_equality_checks
             if (blocked) {
               logger.i(
-                  "updating response status ${responseStatus[chargerViewModel.id!]}");
+                  "$blocked updating response status in if ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
               /*var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
@@ -473,6 +473,8 @@ class BackgroundService {
               await sendHeartbeat(chargerViewModel.id!);
               chargerState[chargerViewModel.id!] = 'heartbeat';*/
             } else {
+              logger.i(
+                  "$blocked updating response status in else ${responseStatus[chargerViewModel.id!]}");
               logger.i("Step 7 for : ${chargerViewModel.id}\n");
 
               await DatabaseHelper.instance
@@ -853,12 +855,20 @@ class BackgroundService {
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
             logger.t("decoded status ${responseStatus[chargerId]}");
+            print(responseStatus[chargerId]);
             if (responseStatus[chargerId] == 'Blocked' ||
                 responseStatus[chargerId] == 'Invalid') {
               blocked = true;
+              var detectionDelay = Random().nextInt(2);
+              await delayInSeconds(detectionDelay+1);
+
               blockedChargerHandle(chargerId);
+              print("true");
+              print(responseStatus[chargerId]);
             }else{
               blocked = false;
+              print("false");
+              print(responseStatus[chargerId]);
             }
 
           }
@@ -1161,6 +1171,8 @@ class BackgroundService {
 
     await sendHeartbeat(chargerId);
     chargerState[chargerId] = 'heartbeat';
+
+    logger.i("blockedChargerHandle() closed ${responseStatus[chargerId]}");
   }
 }
 
