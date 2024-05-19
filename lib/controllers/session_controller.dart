@@ -1,8 +1,6 @@
 import 'package:ev_charger/models/charger_color_status_model.dart';
 import 'package:ev_charger/services/database_helper.dart';
 import 'package:get/get.dart';
-import 'package:logger/logger.dart';
-
 import '../models/active_session_model.dart';
 import '../models/chargers_view_model.dart';
 
@@ -10,7 +8,6 @@ class SessionController extends GetxController {
   var sessions = <ActiveSessionModel>[].obs;
 
   var chargers = <ChargersViewModel>[].obs;
-  final Logger log = Logger();
 
   @override
   void onInit() {
@@ -27,15 +24,15 @@ class SessionController extends GetxController {
 
   void fetchSessions() async {
     try {
-      log.t("fetch sessions ");
+      print("fetch sessions ");
       final dbHelper = DatabaseHelper.instance;
       final sessionMaps = await dbHelper.getSessions();
       final fetchedSessions =
           sessionMaps.map((map) => ActiveSessionModel.fromJson(map)).toList();
       sessions.assignAll(fetchedSessions);
-      log.i(fetchedSessions);
+      print(fetchedSessions);
     } catch (e) {
-      log.e('Error fetching sessions: $e');
+      print('Error fetching sessions: $e');
     }
   }
 

@@ -3,7 +3,6 @@ import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/models/smtp_view_model.dart';
 import 'package:ev_charger/views/widgets/dialog/custom_info_bar.dart';
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -24,7 +23,6 @@ class DatabaseHelper {
 
   // The single instance of DatabaseHelper.
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-  final Logger log = Logger();
 
   // The database instance.
   Database? _database;
@@ -485,19 +483,21 @@ class DatabaseHelper {
     SELECT charging_status,charge_box_serial_number FROM chargers WHERE id = ? LIMIT 1
   ''', [chargerId]);
 
-    log.i("chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
-    log.t("stop data $stop");
+    print(
+        "chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
+    print("stop data $stop");
     if (rows.isNotEmpty) {
-      if(rows.first['charging_status'] == 'waiting'){
-        if(chargingStatus != 'start'){
+      if (rows.first['charging_status'] == 'waiting') {
+        if (chargingStatus != 'start') {
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update
             where: 'id = ?', // Condition to find the right row
             whereArgs: [chargerId], // Values for where condition
           );
-        }else if(stop == -1){
-          log.e("charger stopped   #### ${rows.first['charge_box_serial_number']} ");
+        } else if (stop == -1) {
+          print(
+              "charger stopped   #### ${rows.first['charge_box_serial_number']} ");
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update
@@ -505,7 +505,7 @@ class DatabaseHelper {
             whereArgs: [chargerId], // Values for where condition
           );
         }
-      }else {
+      } else {
         await db.update(
           'chargers',
           {'charging_status': chargingStatus}, // Values to update
@@ -803,16 +803,16 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ${rows}");
-    if(rows.isEmpty){
-        await db.update(
-          'cards', // Table name
-          {'charger_id': newChargerId}, // Values to update
-          where: 'id = ?', // Condition to find the right row
-          whereArgs: [cardId], // Values for where condition
-        );
+    print("cardID $cardId $newChargerId  #### ${rows}");
+    if (rows.isEmpty) {
+      await db.update(
+        'cards', // Table name
+        {'charger_id': newChargerId}, // Values to update
+        where: 'id = ?', // Condition to find the right row
+        whereArgs: [cardId], // Values for where condition
+      );
     }
-    if(rows.isNotEmpty && newChargerId == ''){
+    if (rows.isNotEmpty && newChargerId == '') {
       await db.update(
         'cards', // Table name
         {'charger_id': newChargerId}, // Values to update
