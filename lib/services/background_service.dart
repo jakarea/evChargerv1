@@ -33,7 +33,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 60;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -66,6 +66,7 @@ class BackgroundService {
   int nextTimezoneChange = 0;
   bool _socketConnected = false;
   bool isConnected = false;
+  bool blocked = false;
 
   Map<String, dynamic>? forceCardData;
   Map<String, dynamic>? forceCharger;
@@ -177,7 +178,7 @@ class BackgroundService {
       forceCardData = await DatabaseHelper.instance.getCardById(cardId);
       ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
       chargerState[charger.id!] = 'heartbeat';
-      await DatabaseHelper.instance.updateTime(chargerId, 15);
+      await DatabaseHelper.instance.updateTime(chargerId, int.parse(charger.intervalTime!));
     } else {
       await DatabaseHelper.instance.updateChargerId(cardId, '');
       await DatabaseHelper.instance
@@ -231,6 +232,9 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
+    /*await DatabaseHelper.instance
+        .deleteNotificationLog(4);*/
+
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     //isConnected = true;
@@ -425,23 +429,23 @@ class BackgroundService {
             logger.i("Step 6 end for : ${chargerViewModel.id}\n");
             //You can now use 'card' safely within this block.
 
-            detectionDelay = Random().nextInt(3);
-            await delayInSeconds(detectionDelay);
+            detectionDelay = Random().nextInt(2);
+            await delayInSeconds(detectionDelay+1);
 
-            logger.i("response status ${responseStatus[chargerViewModel.id!]}");
+            logger.i("$blocked before if response status ${chargerViewModel.id} ${chargerViewModel.chargeBoxSerialNumber}  ${responseStatus[chargerViewModel.id!]}");
+            logger.i("all response data ${responseStatus}");
             // ignore: unrelated_type_equality_checks
-            if (responseStatus[chargerViewModel.id!] == 'Blocked' ||
-                responseStatus[chargerViewModel.id!] == 'Invalid') {
+            if (blocked) {
               logger.i(
-                  "updating response status ${responseStatus[chargerViewModel.id!]}");
+                  "$blocked updating response status in if ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
-              var uid = cardUId[chargerViewModel.id!];
+              /*var uid = cardUId[chargerViewModel.id!];
               var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
               var cardNumber = card.cardNumber;
-              var msp = card.msp;
+              var msp = card.msp;*/
 
               /**updating charger status*/
-              await DatabaseHelper.instance
+              /*await DatabaseHelper.instance
                   .updateChargingStatus(chargerViewModel.id!, "Start", -1);
               await DatabaseHelper.instance
                   .updateChargerStatus(chargerViewModel.id!, "0");
@@ -467,8 +471,10 @@ class BackgroundService {
                   "StatusNotification", "Available", "", "", "", 0, 1);
 
               await sendHeartbeat(chargerViewModel.id!);
-              chargerState[chargerViewModel.id!] = 'heartbeat';
+              chargerState[chargerViewModel.id!] = 'heartbeat';*/
             } else {
+              logger.i(
+                  "$blocked updating response status in else ${responseStatus[chargerViewModel.id!]}");
               logger.i("Step 7 for : ${chargerViewModel.id}\n");
 
               await DatabaseHelper.instance
@@ -849,6 +855,22 @@ class BackgroundService {
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
             logger.t("decoded status ${responseStatus[chargerId]}");
+            print(responseStatus[chargerId]);
+            if (responseStatus[chargerId] == 'Blocked' ||
+                responseStatus[chargerId] == 'Invalid') {
+              blocked = true;
+              var detectionDelay = Random().nextInt(2);
+              await delayInSeconds(detectionDelay+1);
+
+              blockedChargerHandle(chargerId);
+              print("true");
+              print(responseStatus[chargerId]);
+            }else{
+              blocked = false;
+              print("false");
+              print(responseStatus[chargerId]);
+            }
+
           }
 
           /**checking index 2 and its status for stopChargingImmediately*/
@@ -1107,6 +1129,50 @@ class BackgroundService {
     ]);
     await sendMessage(stopTransaction, chargerId);
     DatabaseHelper.instance.deleteNotificationLog(chargerId);
+  }
+
+  Future<void> blockedChargerHandle(int chargerId) async {
+    logger.i(
+        "updating response status ${responseStatus[chargerId]}");
+    Map<String, dynamic>? cardData = await DatabaseHelper.instance
+        .getCardByChargerId(chargerId);
+    CardViewModel card = CardViewModel.fromJson(cardData!);
+    // TODO: and send mail to admin
+    var uid = cardUId[chargerId];
+    var chargeBoxNumber = chargeBoxSerialNumber[chargerId];
+    var cardNumber = card.cardNumber;
+    var msp = card.msp;
+
+    /**updating charger status*/
+    await DatabaseHelper.instance
+        .updateChargingStatus(chargerId, "Start", -1);
+    await DatabaseHelper.instance
+        .updateChargerStatus(chargerId, "0");
+
+    SmtpService.sendEmail(
+        subject: 'Card Blocked',
+        text: "$uid has blocked!",
+        headerText: "BoxSerialNumber: $chargeBoxNumber",
+        contentText: "MSP: $msp <br> Card Number: $cardNumber");
+
+    nextSession[chargerId] =
+        await getRandomSessionRestTime(
+        numberOfCharge[chargerId],
+        numberOfChargeDays[chargerId],
+        randomTime[chargerId]);
+
+    await DatabaseHelper.instance.updateTimeField(
+        cardId[chargerId],
+        nextSession[chargerId]);
+    await DatabaseHelper.instance.updateChargerId(card.id!, '');
+
+    await sendStatusNotification(chargerId,
+    "StatusNotification", "Available", "", "", "", 0, 1);
+
+    await sendHeartbeat(chargerId);
+    chargerState[chargerId] = 'heartbeat';
+
+    logger.i("blockedChargerHandle() closed ${responseStatus[chargerId]}");
   }
 }
 

@@ -773,6 +773,17 @@ class DatabaseHelper {
     return cards.isNotEmpty ? cards.first : null;
   }
 
+  // get single card by id
+  Future<Map<String, dynamic>?> getCardByChargerId(int chargerId) async {
+    Database db = await instance.database;
+    List<Map<String, dynamic>> cards = await db.query(
+      'cards',
+      where: 'charger_id = ?',
+      whereArgs: [chargerId],
+    );
+    return cards.isNotEmpty ? cards.first : null;
+  }
+
   Future<void> removeChargerId(int chargerId, String newChargerId) async {
     Database db = await instance.database;
     // Proceed with the update if the charger_id is either unique or an empty string
@@ -792,7 +803,7 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ${rows.length}");
+    log.i("cardID $cardId $newChargerId  #### ${rows}");
     if(rows.isEmpty){
         await db.update(
           'cards', // Table name
@@ -800,6 +811,14 @@ class DatabaseHelper {
           where: 'id = ?', // Condition to find the right row
           whereArgs: [cardId], // Values for where condition
         );
+    }
+    if(rows.isNotEmpty && newChargerId == ''){
+      await db.update(
+        'cards', // Table name
+        {'charger_id': newChargerId}, // Values to update
+        where: 'id = ?', // Condition to find the right row
+        whereArgs: [cardId], // Values for where condition
+      );
     }
   }
 
