@@ -3,7 +3,6 @@ import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/models/smtp_view_model.dart';
 import 'package:ev_charger/views/widgets/dialog/custom_info_bar.dart';
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:logger/logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -24,7 +23,6 @@ class DatabaseHelper {
 
   // The single instance of DatabaseHelper.
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-  final Logger log = Logger();
 
   // The database instance.
   Database? _database;
@@ -376,19 +374,21 @@ class DatabaseHelper {
     int currentTime = DateTime.now().millisecondsSinceEpoch ~/
         1000; // Get current Unix timestamp
 
-    // print("Next: $currentTime + $intervalTime");
+    /*print("Next: $currentTime + $intervalTime");*/
+    print("updating DB charger time $intervalTime  id $chargerId");
     var charger = await db.query('chargers',
         where: 'id = ?', whereArgs: [chargerId], limit: 1);
     if (charger.isNotEmpty) {
       int newUpdateTime =
           intervalTime == null ? currentTime + 0 : currentTime + intervalTime;
+
       int result = await db.update(
         'chargers',
         {'next_update': newUpdateTime},
         where: 'id = ?',
         whereArgs: [chargerId],
       );
-
+      // print("next udpate Time $newUpdateTime");
       return result;
     }
     return 0; // No update if charger not found
@@ -485,19 +485,21 @@ class DatabaseHelper {
     SELECT charging_status,charge_box_serial_number FROM chargers WHERE id = ? LIMIT 1
   ''', [chargerId]);
 
-    log.i("chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
-    log.t("stop data $stop");
+    print(
+        "chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
+    print("stop data $stop");
     if (rows.isNotEmpty) {
-      if(rows.first['charging_status'] == 'waiting'){
-        if(chargingStatus != 'start'){
+      if (rows.first['charging_status'] == 'waiting') {
+        if (chargingStatus != 'start') {
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update
             where: 'id = ?', // Condition to find the right row
             whereArgs: [chargerId], // Values for where condition
           );
-        }else if(stop == -1){
-          log.e("charger stopped   #### ${rows.first['charge_box_serial_number']} ");
+        } else if (stop == -1) {
+          print(
+              "charger stopped   #### ${rows.first['charge_box_serial_number']} ");
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update
@@ -505,7 +507,7 @@ class DatabaseHelper {
             whereArgs: [chargerId], // Values for where condition
           );
         }
-      }else {
+      } else {
         await db.update(
           'chargers',
           {'charging_status': chargingStatus}, // Values to update
@@ -803,16 +805,8 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    log.i("cardID $cardId $newChargerId  #### ${rows}");
-    if(rows.isEmpty){
-        await db.update(
-          'cards', // Table name
-          {'charger_id': newChargerId}, // Values to update
-          where: 'id = ?', // Condition to find the right row
-          whereArgs: [cardId], // Values for where condition
-        );
-    }
-    if(rows.isNotEmpty && newChargerId == ''){
+    print("cardID $cardId $newChargerId  #### ${rows}");
+    if (rows.isEmpty) {
       await db.update(
         'cards', // Table name
         {'charger_id': newChargerId}, // Values to update
@@ -820,6 +814,33 @@ class DatabaseHelper {
         whereArgs: [cardId], // Values for where condition
       );
     }
+    if (rows.isNotEmpty && newChargerId == '') {
+      await db.update(
+        'cards', // Table name
+        {'charger_id': newChargerId}, // Values to update
+        where: 'id = ?', // Condition to find the right row
+        whereArgs: [cardId], // Values for where condition
+      );
+    }
+  }
+
+  Future<void> removeChargerFromCard(int chargerId) async {
+    Database db = await instance.database;
+    // Proceed with the update if the charger_id is either unique or an empty string
+    // print('$newChargerId chargerID updated successfully for');
+    final List<Map<String, dynamic>> rows = await db.rawQuery('''
+    SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
+  ''', [chargerId]);
+
+    if (rows.isEmpty) {
+      await db.update(
+        'cards', // Table name
+        {'charger_id': ''}, // Values to update
+        where: 'charger_id = ?', // Condition to find the right row
+        whereArgs: [chargerId], // Values for where condition
+      );
+    }
+
   }
 
   ///.......................notification log...................///
