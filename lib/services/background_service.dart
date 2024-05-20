@@ -32,7 +32,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 60;
+  int meterInterval = 600;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -55,7 +55,6 @@ class BackgroundService {
   List<double> beginMeterValue = List.filled(900, 0);
   List<int> lastNotificationTime = List.filled(900, 0);
   List<int> lastNotificationTimeDiff = List.filled(900, 0);
-  List<int> timerToPing = List.filled(100, 0);
   List<double> lastMeterValue = List.filled(900, 0);
   List<double> sumKwh = List.filled(900, 0);
   int force = 0;
@@ -236,7 +235,7 @@ class BackgroundService {
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     //isConnected = true;
-    Timer.periodic(const Duration(seconds: 15), (Timer t) async {
+    Timer.periodic(const Duration(seconds: 10), (Timer t) async {
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
@@ -245,12 +244,11 @@ class BackgroundService {
         decideNextTimezoneChangerDate();
       }
 
-      if (time >= 12) {
+      if (time >= 18) {
         await checkInternetConnection();
         time = 0;
         timeZone = await DatabaseHelper.instance.getUtcTime();
       }
-      print("startPeriodicTask() checking internet $isConnected");
       updateChargerTime();
       if (isConnected) {
         await checkAndUpdateDatabase();
@@ -308,7 +306,7 @@ class BackgroundService {
         await DatabaseHelper.instance.queryDueChargers();
     final SessionController sessionController = Get.find<SessionController>();
 
-    print("due chargers before ${charger}");
+    /*print("due chargers before ${charger}");*/
 
     if (force == 1) {
       charger = forceCharger;
@@ -335,8 +333,6 @@ class BackgroundService {
           if (force == 1) {
             cardData = forceCardData;
           }
-
-          // print("case heartbeat $isConnected $cardData");
 
           if (cardData != null && isConnected) {
             DateTime utcNow = DateTime.now().toUtc();
@@ -435,50 +431,12 @@ class BackgroundService {
             detectionDelay = Random().nextInt(2);
             await delayInSeconds(detectionDelay + 1);
 
-            print(
-                "$blocked before if response status ${chargerViewModel.id} ${chargerViewModel.chargeBoxSerialNumber}  ${responseStatus[chargerViewModel.id!]}");
-            print("all response data ${responseStatus}");
             // ignore: unrelated_type_equality_checks
             if (blocked) {
               print(
                   "$blocked updating response status in if ${responseStatus[chargerViewModel.id!]}");
               // TODO: and send mail to admin
-              /*var uid = cardUId[chargerViewModel.id!];
-              var chargeBoxNumber = chargeBoxSerialNumber[chargerViewModel.id!];
-              var cardNumber = card.cardNumber;
-              var msp = card.msp;*/
-
-              /**updating charger status*/
-              /*await DatabaseHelper.instance
-                  .updateChargingStatus(chargerViewModel.id!, "Start", -1);
-              await DatabaseHelper.instance
-                  .updateChargerStatus(chargerViewModel.id!, "0");
-
-              SmtpService.sendEmail(
-                  subject: 'Card Blocked',
-                  text: "$uid has blocked!",
-                  headerText: "BoxSerialNumber: $chargeBoxNumber",
-                  contentText: "MSP: $msp <br> Card Number: $cardNumber");
-
-              nextSession[chargerViewModel.id!] =
-                  await getRandomSessionRestTime(
-                      numberOfCharge[chargerViewModel.id!],
-                      numberOfChargeDays[chargerViewModel.id!],
-                      randomTime[chargerViewModel.id!]);
-
-              await DatabaseHelper.instance.updateTimeField(
-                  cardId[chargerViewModel.id!],
-                  nextSession[chargerViewModel.id!]);
-              await DatabaseHelper.instance.updateChargerId(card.id!, '');
-
-              await sendStatusNotification(chargerViewModel.id!,
-                  "StatusNotification", "Available", "", "", "", 0, 1);
-
-              await sendHeartbeat(chargerViewModel.id!);
-              chargerState[chargerViewModel.id!] = 'heartbeat';*/
             } else {
-              print(
-                  "$blocked updating response status in else ${responseStatus[chargerViewModel.id!]}");
               print("Step 7 for : ${chargerViewModel.id}\n");
 
               await DatabaseHelper.instance
@@ -617,8 +575,7 @@ class BackgroundService {
                 .updateChargingStatus(chargerViewModel.id!, "start", -1);
           }
 
-          print("update charger time open ${chargerViewModel.id}  ${chargerViewModel.intervalTime}");
-          await DatabaseHelper.instance.updateTime(chargerViewModel.id!, int.parse(chargerViewModel.intervalTime!));
+          //await DatabaseHelper.instance.updateTime(chargerViewModel.id!, int.parse(chargerViewModel.intervalTime!));
 
           break;
 
@@ -819,7 +776,7 @@ class BackgroundService {
       if (chargerState[chargerViewModel.id!] == 'available') {
         interval = 3;
       }
-      //await DatabaseHelper.instance.updateTime(chargerViewModel.id!, interval);
+      await DatabaseHelper.instance.updateTime(chargerViewModel.id!, interval);
     } // No charger found
   }
 
@@ -881,12 +838,9 @@ class BackgroundService {
           }
         }
       }, onDone: () {
-        // print(
-        //     '$chargerId WebSocket connection closed unexpectedly ${DateTime.now()}\n');
-        _socketConnected = false;
+       _socketConnected = false;
         //_retryConnection(url, chargerId);
       }, onError: (error) {
-        // print('$chargerId Error in WebSocket connection: $error\n');
         _socketConnected = false;
         //_retryConnection(url, chargerId);
       });
@@ -1134,7 +1088,6 @@ class BackgroundService {
   }
 
   Future<void> blockedChargerHandle(int chargerId) async {
-    //print("updating response status ${responseStatus[chargerId]}");
     Map<String, dynamic>? cardData =
         await DatabaseHelper.instance.getCardByChargerId(chargerId);
     CardViewModel card = CardViewModel.fromJson(cardData!);
@@ -1168,8 +1121,6 @@ class BackgroundService {
 
     await sendHeartbeat(chargerId);
     chargerState[chargerId] = 'heartbeat';
-
-    //print("blockedChargerHandle() closed ${responseStatus[chargerId]}");
   }
 }
 
