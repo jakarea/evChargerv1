@@ -169,7 +169,7 @@ class BackgroundService {
 
   void startChargingImmediately(int chargerId, int cardId) async {
     isConnected = await checkInternetConnection();
-    print("is connected internet $isConnected");
+    //print("is connected internet $isConnected");
     if (isConnected) {
       force = 1;
       forceCharger = await DatabaseHelper.instance.getChargerById(chargerId);
@@ -210,7 +210,7 @@ class BackgroundService {
 
   void updateChargerTime() {
     chargerData.forEach((chargerId, data) async {
-      print("chargerTimerData@@@@@@@@ chargerID=$chargerId  ${data.time}");
+      //print("chargerTimerData@@@@@@@@ chargerID=$chargerId  ${data.time}");
       if (data.time == 4) {
         resetChargerTime(chargerId);
         // Call another function here
@@ -230,8 +230,8 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
-    /*await DatabaseHelper.instance
-        .deleteNotificationLog(4);*/
+   /* await DatabaseHelper.instance
+        .deleteNotificationLog(3);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -308,9 +308,14 @@ class BackgroundService {
         await DatabaseHelper.instance.queryDueChargers();
     final SessionController sessionController = Get.find<SessionController>();
 
+    print("due chargers before ${charger}");
+
     if (force == 1) {
       charger = forceCharger;
     }
+
+    //await DatabaseHelper.instance.updateTime(4, 61);
+
     if (charger != null) {
       ChargersViewModel chargerViewModel = ChargersViewModel.fromJson(charger);
 
@@ -331,7 +336,7 @@ class BackgroundService {
             cardData = forceCardData;
           }
 
-          print("case heartbeat $isConnected $cardData");
+          // print("case heartbeat $isConnected $cardData");
 
           if (cardData != null && isConnected) {
             DateTime utcNow = DateTime.now().toUtc();
@@ -605,11 +610,16 @@ class BackgroundService {
             print("Step 3 for : ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
 
-            CardViewModel card = CardViewModel.fromJson(cardData!);
-            await DatabaseHelper.instance.updateChargerId(card.id!, "");
+         /*need to check*/
+            // CardViewModel card = CardViewModel.fromJson(cardData!);
+            await DatabaseHelper.instance.removeChargerFromCard(chargerViewModel.id!);
             await DatabaseHelper.instance
                 .updateChargingStatus(chargerViewModel.id!, "start", -1);
           }
+
+          print("update charger time open ${chargerViewModel.id}  ${chargerViewModel.intervalTime}");
+          await DatabaseHelper.instance.updateTime(chargerViewModel.id!, int.parse(chargerViewModel.intervalTime!));
+
           break;
 
         case 'charging':
@@ -809,7 +819,7 @@ class BackgroundService {
       if (chargerState[chargerViewModel.id!] == 'available') {
         interval = 3;
       }
-      await DatabaseHelper.instance.updateTime(chargerViewModel.id!, interval);
+      //await DatabaseHelper.instance.updateTime(chargerViewModel.id!, interval);
     } // No charger found
   }
 
@@ -829,7 +839,7 @@ class BackgroundService {
       channel.stream.listen((data) async {
         // Decode the incoming JSON data
         dynamic decodedData = jsonDecode(data);
-        print("Received: ${decodedData}\n");
+        //print("Received: ${decodedData}\n");
         if (decodedData[0] != 3) {
           await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
         }
@@ -844,7 +854,7 @@ class BackgroundService {
           }
 
           String status = '';
-          print("decoded info ${decodedData[2]}");
+          /*print("decoded info ${decodedData[2]}");*/
 
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('idTagInfo') &&
@@ -853,8 +863,6 @@ class BackgroundService {
             // Extract the status from idTagInfo
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
-            print("decoded status ${responseStatus[chargerId]}");
-            print(responseStatus[chargerId]);
             if (responseStatus[chargerId] == 'Blocked' ||
                 responseStatus[chargerId] == 'Invalid') {
               blocked = true;
@@ -862,12 +870,8 @@ class BackgroundService {
               await delayInSeconds(detectionDelay + 1);
 
               blockedChargerHandle(chargerId);
-              print("true");
-              print(responseStatus[chargerId]);
             } else {
               blocked = false;
-              print("false");
-              print(responseStatus[chargerId]);
             }
           }
 
@@ -902,7 +906,7 @@ class BackgroundService {
 
   Future<void> sendMessage(String message, int? chargerId) async {
     if (_sockets[chargerId!] != null) {
-      print("Sent: ${message}\n");
+      //print("Sent: ${message}\n");
 
       _sockets[chargerId]?.sink.add(message);
     } else {
@@ -1130,7 +1134,7 @@ class BackgroundService {
   }
 
   Future<void> blockedChargerHandle(int chargerId) async {
-    print("updating response status ${responseStatus[chargerId]}");
+    //print("updating response status ${responseStatus[chargerId]}");
     Map<String, dynamic>? cardData =
         await DatabaseHelper.instance.getCardByChargerId(chargerId);
     CardViewModel card = CardViewModel.fromJson(cardData!);
@@ -1165,7 +1169,7 @@ class BackgroundService {
     await sendHeartbeat(chargerId);
     chargerState[chargerId] = 'heartbeat';
 
-    print("blockedChargerHandle() closed ${responseStatus[chargerId]}");
+    //print("blockedChargerHandle() closed ${responseStatus[chargerId]}");
   }
 }
 

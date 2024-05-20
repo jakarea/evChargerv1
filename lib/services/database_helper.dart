@@ -374,19 +374,21 @@ class DatabaseHelper {
     int currentTime = DateTime.now().millisecondsSinceEpoch ~/
         1000; // Get current Unix timestamp
 
-    // print("Next: $currentTime + $intervalTime");
+    /*print("Next: $currentTime + $intervalTime");*/
+    print("updating DB charger time $intervalTime  id $chargerId");
     var charger = await db.query('chargers',
         where: 'id = ?', whereArgs: [chargerId], limit: 1);
     if (charger.isNotEmpty) {
       int newUpdateTime =
           intervalTime == null ? currentTime + 0 : currentTime + intervalTime;
+
       int result = await db.update(
         'chargers',
         {'next_update': newUpdateTime},
         where: 'id = ?',
         whereArgs: [chargerId],
       );
-
+      // print("next udpate Time $newUpdateTime");
       return result;
     }
     return 0; // No update if charger not found
@@ -820,6 +822,25 @@ class DatabaseHelper {
         whereArgs: [cardId], // Values for where condition
       );
     }
+  }
+
+  Future<void> removeChargerFromCard(int chargerId) async {
+    Database db = await instance.database;
+    // Proceed with the update if the charger_id is either unique or an empty string
+    // print('$newChargerId chargerID updated successfully for');
+    final List<Map<String, dynamic>> rows = await db.rawQuery('''
+    SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
+  ''', [chargerId]);
+
+    if (rows.isEmpty) {
+      await db.update(
+        'cards', // Table name
+        {'charger_id': ''}, // Values to update
+        where: 'charger_id = ?', // Condition to find the right row
+        whereArgs: [chargerId], // Values for where condition
+      );
+    }
+
   }
 
   ///.......................notification log...................///
