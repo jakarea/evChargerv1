@@ -32,7 +32,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 120;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -215,7 +215,7 @@ class BackgroundService {
         // Call another function here
         if (await checkInternetConnection()) {
           connectToWebSocket(data.url, chargerId);
-          //print("Charger $chargerId reconnection to ${data.url}.");
+          print("Charger $chargerId reconnection to ${data.url}.");
         }
       } else {
         data.time++;
@@ -231,6 +231,10 @@ class BackgroundService {
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
+    /*await DatabaseHelper.instance.updateTimeField(1, 1716271037);
+    await DatabaseHelper.instance.updateTimeField(3, 1716271237);
+    await DatabaseHelper.instance.updateTimeField(5, 1716271000);
+    await DatabaseHelper.instance.updateTimeField(7, 1716270900);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -490,6 +494,7 @@ class BackgroundService {
                   cardNumber: card.cardNumber,
                   msp: card.msp,
                   uid: card.uid,
+                  transactionId: transactionId[chargerViewModel.id!],
                   transactionSession:
                       (now.millisecondsSinceEpoch ~/ 1000).toInt(),
                   kwh: randomKw[chargerViewModel.id!].toString(),
@@ -1020,11 +1025,12 @@ class BackgroundService {
     ]);
 
     await sendMessage(startTransaction, chargerId);
+    await Future.delayed(Duration(seconds: 2));
   }
-
+ // await Future.delayed(Duration(seconds: 2));
   Future<void> sendMeterValues(
       int chargerId, Map<String, dynamic> payload) async {
-    var startTransaction = jsonEncode([
+    var meterValuesData = jsonEncode([
       2,
       "${messageId[chargerId]++}",
       "MeterValues",
@@ -1035,7 +1041,7 @@ class BackgroundService {
       }
     ]);
 
-    await sendMessage(startTransaction, chargerId);
+    await sendMessage(meterValuesData, chargerId);
   }
 
   Future<void> stopTransaction(

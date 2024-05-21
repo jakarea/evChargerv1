@@ -1056,6 +1056,7 @@ class DatabaseHelper {
       FROM active_session
       JOIN cards ON active_session.card_id = cards.id
       JOIN chargers ON active_session.charger_id = chargers.id
+      JOIN notification_log ON active_session.charger_id = notification_log.charger_id
     ''');
   }
 

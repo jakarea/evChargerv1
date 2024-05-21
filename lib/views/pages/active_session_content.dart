@@ -25,6 +25,7 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
   @override
   void initState() {
     super.initState();
+    sessionController.fetchSessions();
     getAllSessions();
   }
 
@@ -95,7 +96,12 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
                   ),
                   Expanded(
                     child: Text(
-                      "Transaction Session Time",
+                      "Transaction Id",
+                      textAlign: TextAlign.center,
+                    ),
+                  ),Expanded(
+                    child: Text(
+                      "Session Time",
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -155,6 +161,11 @@ class _ActiveSessionContentState extends State<ActiveSessionContent> {
                           Expanded(
                             child: Text(
                               session.uid,
+                              textAlign: TextAlign.center,
+                            ),
+                          ), Expanded(
+                            child: Text(
+                              session.transactionId.toString(),
                               textAlign: TextAlign.center,
                             ),
                           ),

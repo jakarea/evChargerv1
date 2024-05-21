@@ -24,13 +24,12 @@ class SessionController extends GetxController {
 
   void fetchSessions() async {
     try {
-      print("fetch sessions ");
+      sessions.clear();
       final dbHelper = DatabaseHelper.instance;
       final sessionMaps = await dbHelper.getSessions();
       final fetchedSessions =
           sessionMaps.map((map) => ActiveSessionModel.fromJson(map)).toList();
       sessions.assignAll(fetchedSessions);
-      print(fetchedSessions);
     } catch (e) {
       print('Error fetching sessions: $e');
     }
