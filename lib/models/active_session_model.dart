@@ -7,6 +7,7 @@ class ActiveSessionModel {
   final String cardNumber;
   final String msp;
   final String uid;
+  final int transactionId;
   final int transactionSession;
   final String kwh;
   final String sessionTime;
@@ -20,6 +21,7 @@ class ActiveSessionModel {
     required this.cardNumber,
     required this.msp,
     required this.uid,
+    required this.transactionId,
     required this.transactionSession,
     required this.kwh,
     required this.sessionTime,
@@ -29,13 +31,14 @@ class ActiveSessionModel {
   factory ActiveSessionModel.fromJson(Map<String, dynamic> json) {
     return ActiveSessionModel(
         cardId: json['id'],
-        chargerId: json['charger_id'],
+        chargerId: json['charger_id'].toString(),
         chargerName: "",
         chargerModel: "",
         serialBox: json['charge_box_serial_number'],
         cardNumber: json['card_number'],
         msp: json['msp'],
         uid: json['uid'],
+        transactionId: json['transactionId'],
         transactionSession: json['transaction_start_time'],
         kwh: json['kwh'],
         sessionTime: json['session_time']);
