@@ -229,13 +229,13 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
-   /* await DatabaseHelper.instance
+    /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
     //isConnected = true;
-    Timer.periodic(const Duration(seconds: 10), (Timer t) async {
+    Timer.periodic(const Duration(seconds: 15), (Timer t) async {
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
@@ -770,7 +770,7 @@ class BackgroundService {
           await sendBootNotification(chargerViewModel);
       } // switch end
 
-      int interval = intervalTime[chargerViewModel.id!];
+      int interval = intervalTime[chargerViewModel.id!] - 15;
 
       // If charger is available, do not wait for interval time, set a new interval time and show available immedately
       if (chargerState[chargerViewModel.id!] == 'available') {
