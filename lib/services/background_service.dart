@@ -59,11 +59,13 @@ class BackgroundService {
   List<double> sumKwh = List.filled(900, 0);
   int force = 0;
   Map<int, ChargerData> chargerData = {};
+  Map<int, AcceptedModel> acceptedModel = {};
 
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
   bool _socketConnected = false;
   bool isConnected = false;
+  bool accepted = true;
   bool blocked = false;
 
   Map<String, dynamic>? forceCardData;
@@ -169,7 +171,7 @@ class BackgroundService {
   void startChargingImmediately(int chargerId, int cardId) async {
     isConnected = await checkInternetConnection();
     //print("is connected internet $isConnected");
-    if (isConnected) {
+    if (isConnected && accepted) {
       force = 1;
       forceCharger = await DatabaseHelper.instance.getChargerById(chargerId);
       forceCardData = await DatabaseHelper.instance.getCardById(cardId);
@@ -231,10 +233,10 @@ class BackgroundService {
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
-    /*await DatabaseHelper.instance.updateTimeField(1, 1716271037);
-    await DatabaseHelper.instance.updateTimeField(3, 1716271237);
-    await DatabaseHelper.instance.updateTimeField(5, 1716271000);
-    await DatabaseHelper.instance.updateTimeField(7, 1716270900);*/
+    /* await DatabaseHelper.instance.updateTimeField(1, 1716454267);
+    await DatabaseHelper.instance.updateTimeField(3, 1716454007);
+    await DatabaseHelper.instance.updateTimeField(5, 1716453007);
+    await DatabaseHelper.instance.updateTimeField(7, 1716453107);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -338,7 +340,7 @@ class BackgroundService {
             cardData = forceCardData;
           }
 
-          if (cardData != null && isConnected) {
+          if (cardData != null && isConnected && acceptedModel[chargerViewModel.id]!.status) {
             DateTime utcNow = DateTime.now().toUtc();
             String sign = timeZone.substring(3, 4);
             int hours = int.parse(timeZone.substring(4, 6));
@@ -573,9 +575,10 @@ class BackgroundService {
             print("Step 3 for : ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
 
-         /*need to check*/
+            /*need to check*/
             // CardViewModel card = CardViewModel.fromJson(cardData!);
-            await DatabaseHelper.instance.removeChargerFromCard(chargerViewModel.id!);
+            await DatabaseHelper.instance
+                .removeChargerFromCard(chargerViewModel.id!);
             await DatabaseHelper.instance
                 .updateChargingStatus(chargerViewModel.id!, "start", -1);
           }
@@ -801,7 +804,7 @@ class BackgroundService {
       channel.stream.listen((data) async {
         // Decode the incoming JSON data
         dynamic decodedData = jsonDecode(data);
-        //print("Received: ${decodedData}\n");
+        print("Received: ${decodedData}\n");
         if (decodedData[0] != 3) {
           await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
         }
@@ -813,6 +816,14 @@ class BackgroundService {
               decodedData[2].containsKey('transactionId')) {
             // Extract the transactionId
             transactionId[chargerId] = decodedData[2]['transactionId'];
+          }
+
+          /**checking accepted status*/
+          if (decodedData[2] is Map &&
+              decodedData[2].containsKey('status') &&
+              decodedData[2]['status'] == 'Accepted') {
+            acceptedModel[chargerId] = AcceptedModel(chargerId: chargerId, status: true);
+            //print("accepted model ${acceptedModel[chargerId]?.status}");
           }
 
           String status = '';
@@ -843,7 +854,7 @@ class BackgroundService {
           }
         }
       }, onDone: () {
-       _socketConnected = false;
+        _socketConnected = false;
         //_retryConnection(url, chargerId);
       }, onError: (error) {
         _socketConnected = false;
@@ -1027,7 +1038,8 @@ class BackgroundService {
     await sendMessage(startTransaction, chargerId);
     await Future.delayed(Duration(seconds: 2));
   }
- // await Future.delayed(Duration(seconds: 2));
+
+  // await Future.delayed(Duration(seconds: 2));
   Future<void> sendMeterValues(
       int chargerId, Map<String, dynamic> payload) async {
     var meterValuesData = jsonEncode([
@@ -1135,4 +1147,11 @@ class ChargerData {
   String url;
 
   ChargerData({required this.time, required this.url});
+}
+
+class AcceptedModel {
+  int chargerId;
+  bool status;
+
+  AcceptedModel({required this.chargerId, required this.status});
 }
