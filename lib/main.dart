@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ev_charger/services/background_service.dart';
 import 'package:ev_charger/services/database_helper.dart';
@@ -9,6 +11,22 @@ import 'dart:io';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 Future<void> main() async {
+
+  void logError(dynamic error, StackTrace stackTrace) {
+    final logFile = File('error.log');
+    logFile.writeAsStringSync(
+      '${DateTime.now()}: $error\n$stackTrace\n\n',
+      mode: FileMode.append,
+    );
+  }
+
+  runZonedGuarded(() {
+    runApp(MyApp());
+  }, (error, stackTrace) {
+    // Log the error and stack trace to a file or remote server
+    logError(error, stackTrace);
+  });
+
   // Ensures that Flutter widgets and bindings are initialized before the app runs.
   WidgetsFlutterBinding.ensureInitialized();
   BackgroundService();
