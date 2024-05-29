@@ -38,7 +38,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   BackgroundService();
 // Configures the app window properties like title and size.
-  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+ /* if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     doWhenWindowReady(() {
       var initialSize = const Size(1366, 720);
       appWindow.size = initialSize;
@@ -54,7 +54,7 @@ Future<void> main() async {
       // Handle or log the error as needed
       throw Exception(e);
     }
-  }
+  }*/
 
 
   try {
