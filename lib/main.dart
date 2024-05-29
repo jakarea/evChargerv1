@@ -36,7 +36,7 @@ Future<void> main() async {
 
   // Ensures that Flutter widgets and bindings are initialized before the app runs.
   WidgetsFlutterBinding.ensureInitialized();
-  BackgroundService();
+  //BackgroundService();
 // Configures the app window properties like title and size.
  /* if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     doWhenWindowReady(() {
