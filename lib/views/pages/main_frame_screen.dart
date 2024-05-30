@@ -59,7 +59,7 @@ class _MainFrameScreenState extends State<MainFrameScreen> {
     return Column(
       children: [
         // app bar
-        Container(
+        /*Container(
           color: systemColor,
           child: WindowTitleBarBox(
             child: Row(
@@ -83,7 +83,7 @@ class _MainFrameScreenState extends State<MainFrameScreen> {
               ],
             ),
           ),
-        ),
+        ),*/
 
         // app body
         Expanded(

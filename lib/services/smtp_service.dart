@@ -24,7 +24,7 @@ class SmtpService {
     String username =
         smtpViewModel?.email ?? 'sendinfo98@gmail.com'; // Your Gmail address
     String password = smtpViewModel?.password ??
-        'opowswxydopaehwb'; // Your App Password or Gmail password
+        'oelcmiywizzpcuzy '; // Your App Password or Gmail password
 
     // Creating the SMTP server with Gmail settings
     final smtpServer = gmail(username, password);

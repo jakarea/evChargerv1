@@ -1,12 +1,16 @@
+import 'dart:io';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ev_charger/services/background_service.dart';
 import 'package:ev_charger/services/database_helper.dart';
-import 'package:ev_charger/views/pages/auth/Login_page.dart';
 import 'package:ev_charger/views/pages/main_frame_screen.dart';
-import 'package:fluent_ui/fluent_ui.dart';
-import 'dart:io';
 
-Future<void> main() async {
+void main() {
+  runApp(const MyApp());
+  next();
+}
+
+Future<void> next() async {
   // Ensures that Flutter widgets and bindings are initialized before the app runs.
   WidgetsFlutterBinding.ensureInitialized();
   BackgroundService();
@@ -28,8 +32,6 @@ Future<void> main() async {
       throw Exception(e);
     }
   }
-
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -52,3 +54,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
