@@ -37,6 +37,7 @@ class SessionController extends GetxController {
 
   void addSession(ActiveSessionModel session) {
     sessions.add(session);
+    fetchSessions();
   }
 
   Future<void> removeSessionByChargerId(String chargerId) async {
