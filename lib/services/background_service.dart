@@ -32,7 +32,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 60;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -201,7 +201,24 @@ class BackgroundService {
         random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
     int nextSession = randomNumber.abs() + lastSession * 3;
     DateTime now = DateTime.now().toUtc();
-    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+    //return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+
+
+    // Defining custom range
+    int minSeconds = 300;
+    int maxSeconds = 600;
+    int randomSeconds = minSeconds + random.nextInt(maxSeconds - minSeconds + 1);
+
+    Duration randomDuration = Duration(seconds: randomSeconds);
+
+    DateTime currentTime = DateTime.now();
+
+    DateTime futureTime = currentTime.add(randomDuration);
+
+    int unixTimestamp = futureTime.millisecondsSinceEpoch ~/ 1000;
+    print("randomSeconds $unixTimestamp");
+    return unixTimestamp;
+
   }
 
 // Function to add a new charger with initial time = 0 and URL
@@ -233,10 +250,10 @@ class BackgroundService {
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
-    /* await DatabaseHelper.instance.updateTimeField(1, 1716454267);
-    await DatabaseHelper.instance.updateTimeField(3, 1716454007);
-    await DatabaseHelper.instance.updateTimeField(5, 1716453007);
-    await DatabaseHelper.instance.updateTimeField(7, 1716453107);*/
+     /*await DatabaseHelper.instance.updateTimeField(1, 1717391955);
+    await DatabaseHelper.instance.updateTimeField(3, 1717391955);
+    await DatabaseHelper.instance.updateTimeField(5, 1717391955);
+    await DatabaseHelper.instance.updateTimeField(7, 1717391955);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -339,6 +356,8 @@ class BackgroundService {
           if (force == 1) {
             cardData = forceCardData;
           }
+
+          print("inside into heartbeat state  ${acceptedModel[chargerViewModel.id]!.status}");
 
           if (cardData != null && isConnected && acceptedModel[chargerViewModel.id]!.status) {
             DateTime utcNow = DateTime.now().toUtc();
