@@ -32,7 +32,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 60;
+  int meterInterval = 600;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -60,6 +60,7 @@ class BackgroundService {
   int force = 0;
   Map<int, ChargerData> chargerData = {};
   Map<int, AcceptedModel> acceptedModel = {};
+  Map<int, AuthorizeModel> authorizeModel = {};
 
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
@@ -201,13 +202,13 @@ class BackgroundService {
         random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
     int nextSession = randomNumber.abs() + lastSession * 3;
     DateTime now = DateTime.now().toUtc();
-    //return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
-
+    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
 
     // Defining custom range
-    int minSeconds = 300;
+    /*int minSeconds = 300;
     int maxSeconds = 600;
-    int randomSeconds = minSeconds + random.nextInt(maxSeconds - minSeconds + 1);
+    int randomSeconds =
+        minSeconds + random.nextInt(maxSeconds - minSeconds + 1);
 
     Duration randomDuration = Duration(seconds: randomSeconds);
 
@@ -216,9 +217,7 @@ class BackgroundService {
     DateTime futureTime = currentTime.add(randomDuration);
 
     int unixTimestamp = futureTime.millisecondsSinceEpoch ~/ 1000;
-    print("randomSeconds $unixTimestamp");
-    return unixTimestamp;
-
+    return unixTimestamp;*/
   }
 
 // Function to add a new charger with initial time = 0 and URL
@@ -234,7 +233,6 @@ class BackgroundService {
         // Call another function here
         if (await checkInternetConnection()) {
           connectToWebSocket(data.url, chargerId);
-          print("Charger $chargerId reconnection to ${data.url}.");
         }
       } else {
         data.time++;
@@ -250,10 +248,10 @@ class BackgroundService {
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
-     /*await DatabaseHelper.instance.updateTimeField(1, 1717391955);
-    await DatabaseHelper.instance.updateTimeField(3, 1717391955);
-    await DatabaseHelper.instance.updateTimeField(5, 1717391955);
-    await DatabaseHelper.instance.updateTimeField(7, 1717391955);*/
+    /*await DatabaseHelper.instance.updateTimeField(1, 1717484482);
+    await DatabaseHelper.instance.updateTimeField(3, 1717484482);
+    await DatabaseHelper.instance.updateTimeField(5, 1717484482);
+    await DatabaseHelper.instance.updateTimeField(7, 1717484482);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -329,7 +327,7 @@ class BackgroundService {
         await DatabaseHelper.instance.queryDueChargers();
     final SessionController sessionController = Get.find<SessionController>();
 
-    /*print("due chargers before ${charger}");*/
+    print("due chargers before ${charger}");
 
     if (force == 1) {
       charger = forceCharger;
@@ -352,14 +350,30 @@ class BackgroundService {
 
           Map<String, dynamic>? cardData = await DatabaseHelper.instance
               .getCardByGroupAndTime(chargerViewModel.groupId!);
+          print("card Data $cardData");
 
           if (force == 1) {
             cardData = forceCardData;
           }
 
-          print("inside into heartbeat state  ${acceptedModel[chargerViewModel.id]!.status}");
+          /**for acceptedModel*/
+          bool accepted = false;
+          if (acceptedModel[chargerViewModel.id] != null &&
+              acceptedModel[chargerViewModel.id]!.status == 1) {
+            accepted = true;
+          }
+          /**for authorizeModel*/
+          bool authorize = false;
+          if (authorizeModel[chargerViewModel.id] != null &&
+              authorizeModel[chargerViewModel.id]!.status == 1) {
+            authorize = true;
+          }
 
-          if (cardData != null && isConnected && acceptedModel[chargerViewModel.id]!.status) {
+          print("acceptedModel $accepted authorize $authorize");
+
+          if (cardData != null &&
+              isConnected && accepted && !authorize) {
+            print("step 3 if block");
             DateTime utcNow = DateTime.now().toUtc();
             String sign = timeZone.substring(3, 4);
             int hours = int.parse(timeZone.substring(4, 6));
@@ -370,7 +384,10 @@ class BackgroundService {
                     sign == '-' ? -totalOffsetMinutes : totalOffsetMinutes));
 
             CardViewModel card = CardViewModel.fromJson(cardData);
+            authorizeModel[chargerViewModel.id!] =
+                AuthorizeModel(chargerId: chargerViewModel.id!, status: 1);
 
+            print("before updating card ${card.id} ${chargerViewModel.id}");
             await DatabaseHelper.instance
                 .updateChargerId(card.id!, chargerViewModel.id.toString());
 
@@ -428,7 +445,7 @@ class BackgroundService {
             print("Step 4 end for : ${chargerViewModel.id}\n");
 
             print("Step 5 for : ${chargerViewModel.id}\n");
-            int detectionDelay = Random().nextInt(12) + 2;
+            int detectionDelay = Random().nextInt(5) + 2;
             await Future.delayed(Duration(seconds: detectionDelay));
             await sendStatusNotification(
                 chargerViewModel.id!,
@@ -450,6 +467,8 @@ class BackgroundService {
                 "",
                 randomTime[chargerViewModel.id!],
                 1);
+
+
             print("Step 6 end for : ${chargerViewModel.id}\n");
             //You can now use 'card' safely within this block.
 
@@ -477,7 +496,7 @@ class BackgroundService {
                   numberOfChargeDays[chargerViewModel.id!],
                   randomTime[chargerViewModel.id!]);
               await DatabaseHelper.instance.updateTimeField(
-                  cardId[chargerViewModel.id!],
+                  card.id!, //cardId[chargerViewModel.id!]
                   nextSession[chargerViewModel.id!]);
               await sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
                   "", "", "", "", randomTime[chargerViewModel.id!], 1);
@@ -591,7 +610,7 @@ class BackgroundService {
               intervalTime[chargerViewModel.id!] = meterInterval;
             }
           } else {
-            print("Step 3 for : ${chargerViewModel.id}\n");
+            print("Step 3  else block: ${chargerViewModel.id}\n");
             await sendHeartbeat(chargerViewModel.id!);
 
             /*need to check*/
@@ -756,6 +775,9 @@ class BackgroundService {
             await DatabaseHelper.instance
                 .updateChargerStatus(chargerViewModel.id!, "2");
 
+            authorizeModel[chargerViewModel.id!] =
+                AuthorizeModel(chargerId: chargerViewModel.id!, status: 0);
+
             print("Step 17 for : ${chargerViewModel.id}\n");
             await stopTransaction(
                 chargerViewModel.id!,
@@ -841,7 +863,8 @@ class BackgroundService {
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('status') &&
               decodedData[2]['status'] == 'Accepted') {
-            acceptedModel[chargerId] = AcceptedModel(chargerId: chargerId, status: true);
+            acceptedModel[chargerId] =
+                AcceptedModel(chargerId: chargerId, status: 1);
             //print("accepted model ${acceptedModel[chargerId]?.status}");
           }
 
@@ -1170,7 +1193,14 @@ class ChargerData {
 
 class AcceptedModel {
   int chargerId;
-  bool status;
+  int status;
 
   AcceptedModel({required this.chargerId, required this.status});
+}
+
+class AuthorizeModel {
+  int chargerId;
+  int status;
+
+  AuthorizeModel({required this.chargerId, required this.status});
 }

@@ -485,9 +485,6 @@ class DatabaseHelper {
     SELECT charging_status,charge_box_serial_number FROM chargers WHERE id = ? LIMIT 1
   ''', [chargerId]);
 
-    print(
-        "chargerID $chargerId $chargingStatus   #### ${rows.first['charge_box_serial_number']}  ${rows.first['charging_status']}");
-    print("stop data $stop");
     if (rows.isNotEmpty) {
       if (rows.first['charging_status'] == 'waiting') {
         if (chargingStatus != 'start') {
@@ -498,8 +495,6 @@ class DatabaseHelper {
             whereArgs: [chargerId], // Values for where condition
           );
         } else if (stop == -1) {
-          print(
-              "charger stopped   #### ${rows.first['charge_box_serial_number']} ");
           await db.update(
             'chargers',
             {'charging_status': chargingStatus}, // Values to update
@@ -710,7 +705,7 @@ class DatabaseHelper {
 
   Future<void> updateTimeField(int cardId, int newTime) async {
     // Get a reference to the database.
-
+    //print("updateTime  $cardId  and $newTime");
     final db = await database; // Assuming 'database' is your database instance.
 
     // Update the 'time' field with the new value for the specified card ID.
@@ -805,7 +800,6 @@ class DatabaseHelper {
     SELECT charger_id FROM cards WHERE charger_id = ? LIMIT 1
   ''', [newChargerId]);
 
-    print("cardID $cardId $newChargerId  #### ${rows}");
     if (rows.isEmpty) {
       await db.update(
         'cards', // Table name
