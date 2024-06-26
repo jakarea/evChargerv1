@@ -72,4 +72,47 @@ class PreferencesHelper {
     Set<int> intSet = await loadAcceptedChargerList();
     return intSet.contains(value);
   }
+
+  ///for charger States
+  static const String _chargerKeyPrefix = 'state_charger_';
+
+  //  Save or update charger status
+  static Future<void> saveChargerStatus(int chargerId, String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_chargerKeyPrefix$chargerId', status);
+  }
+
+  // Load charger status
+  static Future<String?> loadChargerStatus(int chargerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_chargerKeyPrefix$chargerId');
+  }
+
+  // Remove charger status
+  static Future<void> removeChargerStatus(int chargerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_chargerKeyPrefix$chargerId');
+  }
+
+  // Load all charger statuses
+  static Future<Map<int, String>> loadAllChargerStatuses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final allKeys = prefs.getKeys();
+    final chargerKeys = allKeys.where((key) => key.startsWith(_chargerKeyPrefix)).toList();
+    print("charger keys $chargerKeys");
+    Map<int, String> chargerStatuses = {};
+    if(chargerKeys.isNotEmpty){
+      for (String key in chargerKeys) {
+        final chargerId = int.parse(key.replaceFirst(_chargerKeyPrefix, ''));
+        final status = prefs.getString(key);
+        if (status != null) {
+          chargerStatuses[chargerId] = status;
+        }
+      }
+    }
+
+
+    return chargerStatuses;
+  }
+
 }
