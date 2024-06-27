@@ -38,7 +38,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 120;
+  int meterInterval = 600;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -218,7 +218,7 @@ class BackgroundService {
         random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
     int nextSession = randomNumber.abs() + lastSession * 3;
     DateTime now = DateTime.now().toUtc();
-    //return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
 
     // Defining custom range
     int minSeconds = 300;
