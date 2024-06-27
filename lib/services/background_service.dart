@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:ev_charger/controllers/session_controller.dart';
+import 'package:ev_charger/controllers/sharedPreference_controller.dart';
 import 'package:ev_charger/models/active_session_model.dart';
 import 'package:ev_charger/models/card_view_model.dart';
 import 'package:ev_charger/models/chargers_view_model.dart';
@@ -37,7 +38,7 @@ class BackgroundService {
   int counter = 1;
   int randomNumber = 2;
   int repeat = 0;
-  int meterInterval = 600;
+  int meterInterval = 120;
   int nowTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   List<int> transactionId = List.filled(900, 0);
   List<int> nextSession = List.filled(900, 0);
@@ -78,78 +79,29 @@ class BackgroundService {
       DateFormat("yyyy-MM-ddTHH:mm:ss'Z'").format(DateTime.now()).toString());
   static const Duration delayDuration = Duration(seconds: 3);
 
+  final SharedPreferenceController sharedPreferenceController = SharedPreferenceController();
+
   factory BackgroundService() {
     return _instance;
   }
 
   BackgroundService._internal() {
+    sharedPreferenceController.cleanSharedPref();
+    loadSharedPreference();
     checkInternetConnection();
-    _loadIntList();
-    _loadAllChargerStatuses();
     startPeriodicTask();
     decideNextTimezoneChangerDate();
     _sockets = List.filled(100, null);
     // _channels = List.filled(100, null);
   }
 
-  PreferencesHelper preferencesHelper = PreferencesHelper();
-
-  ///for charger state
-  Future<void> _saveChargerStatus(int chargerId, String status) async {
-    await PreferencesHelper.saveChargerStatus(chargerId, status);
-    _loadAllChargerStatuses();
+  Future<void>loadSharedPreference() async{
+    _chargerStatuses = await sharedPreferenceController.loadAllChargerStatuses();
+    print("all charger states $_chargerStatuses");
+    _authorizedChargerList = await sharedPreferenceController.loadAuthorizeChargerList();
+    _acceptedChargerList = await sharedPreferenceController.loadAcceptedChargerList();
   }
-
-  Future<String?> _checkChargerStatus(int chargerId) async {
-    String? status = await PreferencesHelper.loadChargerStatus(chargerId);
-    return status;
-  }
-
-  Future<void> _removeChargerStatus(int chargerId) async {
-    await PreferencesHelper.removeChargerStatus(chargerId);
-    _loadAllChargerStatuses();
-  }
-
-  Future<void> _loadAllChargerStatuses() async {
-    Map<int, String> chargerStatuses =
-        await PreferencesHelper.loadAllChargerStatuses();
-    _chargerStatuses = chargerStatuses;
-    print("all charger states ${chargerStatuses}");
-  }
-
-  /// for authorize and accepted state
-  Future<void> _loadIntList() async {
-    Set<int> intList = await PreferencesHelper.loadChargerList();
-    _authorizedChargerList = intList;
-
-    Set<int> intList2 = await PreferencesHelper.loadAcceptedChargerList();
-    _acceptedChargerList = intList2;
-    print("local chargers ${_authorizedChargerList}");
-
-    /*final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();*/
-  }
-
-  Future<void> _addIntToList(int value) async {
-    await PreferencesHelper.addChargerToList(value);
-    _loadIntList();
-  }
-
-  Future<void> _removeIntFromList(int value) async {
-    await PreferencesHelper.removeChargerFromList(value);
-    _loadIntList();
-  }
-
-  Future<void> _addAcceptedList(int value) async {
-    await PreferencesHelper.addAcceptedCharger(value);
-    _loadIntList();
-  }
-
-  Future<void> _removeFromAcceptedList(int value) async {
-    await PreferencesHelper.removeAcceptedCharger(value);
-    _loadIntList();
-  }
-
+  
   Future<void> delayInSeconds(int seconds) async {
     await Future.delayed(Duration(seconds: seconds));
   }
@@ -241,7 +193,7 @@ class BackgroundService {
       forceCardData = await DatabaseHelper.instance.getCardById(cardId);
       ChargersViewModel charger = ChargersViewModel.fromJson(forceCharger!);
       /*chargerState[charger.id!] = 'heartbeat';*/
-      _saveChargerStatus(charger.id!, 'heartbeat');
+      sharedPreferenceController.saveChargerStatus(charger.id!, 'heartbeat');
       await DatabaseHelper.instance.updateTime(chargerId, 5);
     } else {
       await DatabaseHelper.instance.updateChargerId(cardId, '');
@@ -266,7 +218,7 @@ class BackgroundService {
         random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
     int nextSession = randomNumber.abs() + lastSession * 3;
     DateTime now = DateTime.now().toUtc();
-    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+    //return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
 
     // Defining custom range
     int minSeconds = 300;
@@ -312,11 +264,11 @@ class BackgroundService {
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(3);*/
-    /*await DatabaseHelper.instance.updateTimeField(1, 1719385812);
-    await DatabaseHelper.instance.updateTimeField(3, 1719385812);
-    await DatabaseHelper.instance.updateTimeField(5, 1719385812);
-    await DatabaseHelper.instance.updateTimeField(7, 1719385812);
-    await DatabaseHelper.instance.updateTimeField(7, 1719385812);*/
+    /*await DatabaseHelper.instance.updateTimeField(1, 1719464496);
+    await DatabaseHelper.instance.updateTimeField(3, 1719464496);
+    await DatabaseHelper.instance.updateTimeField(5, 1719464496);
+    await DatabaseHelper.instance.updateTimeField(7, 1719464496);
+    await DatabaseHelper.instance.updateTimeField(7, 1719464496);*/
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -385,7 +337,7 @@ class BackgroundService {
     // BootNotification for newly added charger
     await sendBootNotification(charger);
     /*chargerState[charger.id!] = 'heartbeat';*/
-    _saveChargerStatus(charger.id!, 'heartbeat');
+    sharedPreferenceController.saveChargerStatus(charger.id!, 'heartbeat');
   }
 
   Future<void> checkAndUpdateDatabase() async {
@@ -405,7 +357,7 @@ class BackgroundService {
       ChargersViewModel chargerViewModel = ChargersViewModel.fromJson(charger);
 
       /*String currentState = chargerState[chargerViewModel.id!];*/
-      String? currentState = await _checkChargerStatus(chargerViewModel.id!);
+      String? currentState = await sharedPreferenceController.checkChargerStatus(chargerViewModel.id!);
       intervalTime[chargerViewModel.id!] =
           int.parse(chargerViewModel.intervalTime!);
       CardViewModel? card;
@@ -451,7 +403,8 @@ class BackgroundService {
             CardViewModel card = CardViewModel.fromJson(cardData);
             /*authorizeModel[chargerViewModel.id!] =
                 AuthorizeModel(chargerId: chargerViewModel.id!, status: 1);*/
-            _addIntToList(chargerViewModel.id!);
+            sharedPreferenceController.addToAuthorizeList(chargerViewModel.id!);
+            loadSharedPreference();
 
             print("before updating card ${card.id} ${chargerViewModel.id}");
             await DatabaseHelper.instance
@@ -551,7 +504,7 @@ class BackgroundService {
             } else {
               print("Step 7 for : ${chargerViewModel.id}\n");
               /*chargerState[chargerViewModel.id!] = 'charging';*/
-              _saveChargerStatus(chargerViewModel.id!, 'charging');
+              sharedPreferenceController.saveChargerStatus(chargerViewModel.id!, 'charging');
 
               await DatabaseHelper.instance
                   .updateChargingStatus(chargerViewModel.id!, "Charging", 0);
@@ -675,7 +628,7 @@ class BackgroundService {
                   randomTime[chargerViewModel.id!],
                   1);
               /*chargerState[chargerViewModel.id!] = 'charging';*/
-              _saveChargerStatus(chargerViewModel.id!, 'charging');
+              sharedPreferenceController.saveChargerStatus(chargerViewModel.id!, 'charging');
               lastNotificationTime[chargerViewModel.id!] =
                   now.millisecondsSinceEpoch ~/ 1000;
               intervalTime[chargerViewModel.id!] = meterInterval;
@@ -848,7 +801,8 @@ class BackgroundService {
 
             /*authorizeModel[chargerViewModel.id!] =
                 AuthorizeModel(chargerId: chargerViewModel.id!, status: 0);*/
-            _removeIntFromList(chargerViewModel.id!);
+            sharedPreferenceController.removeFromAuthorizeList(chargerViewModel.id!);
+            loadSharedPreference();
 
             print("Step 17 for : ${chargerViewModel.id}\n");
             await stopTransaction(
@@ -876,7 +830,7 @@ class BackgroundService {
             await sendStatusNotification(chargerViewModel.id!,
                 "StatusNotification", "Available", "", "", "", 0, 1);
             print("Step 2 end for : ${chargerViewModel.id}\n");
-            _saveChargerStatus(chargerViewModel.id!, 'heartbeat');
+            sharedPreferenceController.saveChargerStatus(chargerViewModel.id!, 'heartbeat');
             /*chargerState[chargerViewModel.id!] = 'heartbeat';*/
           }
 
@@ -936,7 +890,8 @@ class BackgroundService {
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('status') &&
               decodedData[2]['status'] == 'Accepted') {
-            _addAcceptedList(chargerId);
+            sharedPreferenceController.addToAcceptedList(chargerId);
+            loadSharedPreference();
             /*acceptedModel[chargerId] =
                 AcceptedModel(chargerId: chargerId, status: 1);*/
             //print("accepted model ${acceptedModel[chargerId]?.status}");
@@ -1045,7 +1000,7 @@ class BackgroundService {
           charger.id!, "StatusNotification", "Available", "", "", "", 0, 1);
 
       /*chargerState[charger.id!] = 'heartbeat';*/
-      _saveChargerStatus(charger.id!, 'heartbeat');
+      sharedPreferenceController.saveChargerStatus(charger.id!, 'heartbeat');
     } else {
       DateTime utcNow = DateTime.now().toUtc();
       String sign = timeZone.substring(3, 4);
@@ -1057,7 +1012,7 @@ class BackgroundService {
 
       messageId[charger.id!] = log['messageId'];
       /*chargerState[charger.id!] = 'charging';*/
-      _saveChargerStatus(charger.id!, 'charging');
+      sharedPreferenceController.saveChargerStatus(charger.id!, 'charging');
       sessionEndTime[charger.id!] = (now.millisecondsSinceEpoch ~/ 1000) - 3600;
       sumKwh[charger.id!] = log['meter_value'];
       transactionId[charger.id!] = log['transactionId'];
@@ -1256,7 +1211,7 @@ class BackgroundService {
         chargerId, "StatusNotification", "Available", "", "", "", 0, 1);
 
     await sendHeartbeat(chargerId);
-    _saveChargerStatus(chargerId, 'heartbeat');
+    sharedPreferenceController.saveChargerStatus(chargerId, 'heartbeat');
     /*chargerState[chargerId] = 'heartbeat';*/
   }
 }
