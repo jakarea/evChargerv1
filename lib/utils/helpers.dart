@@ -70,10 +70,10 @@ class Helpers{
         random.nextInt(thirdOfAverageUse) + random.nextInt(halfOfAverageUse);
     int nextSession = randomNumber.abs() + lastSession * 3;
     DateTime now = DateTime.now().toUtc();
-    //return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
+    return nextSession.toInt() + now.millisecondsSinceEpoch ~/ 1000;
 
     // Defining custom range
-    int minSeconds = 300;
+    /*int minSeconds = 300;
     int maxSeconds = 600;
     int randomSeconds =
         minSeconds + random.nextInt(maxSeconds - minSeconds + 1);
@@ -85,7 +85,7 @@ class Helpers{
     DateTime futureTime = currentTime.add(randomDuration);
 
     int unixTimestamp = futureTime.millisecondsSinceEpoch ~/ 1000;
-    return unixTimestamp;
+    return unixTimestamp;*/
   }
 
   Future<void> delayInSeconds(int seconds) async {
