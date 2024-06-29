@@ -1,18 +1,22 @@
 import 'dart:io';
+import 'package:ev_charger/utils/preferences_helper.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ev_charger/services/background_service.dart';
 import 'package:ev_charger/services/database_helper.dart';
 import 'package:ev_charger/views/pages/main_frame_screen.dart';
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize PreferencesHelper
+  await PreferencesHelper.initialize();
   runApp(const MyApp());
   next();
 }
 
 Future<void> next() async {
   // Ensures that Flutter widgets and bindings are initialized before the app runs.
-  WidgetsFlutterBinding.ensureInitialized();
+
   BackgroundService();
 // Configures the app window properties like title and size.
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {

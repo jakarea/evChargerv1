@@ -1,20 +1,22 @@
-// preferences_helper.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferencesHelper {
+  static SharedPreferences? prefs;
   static const String _chargerList = 'charger_list';
+
+  static Future<void> initialize() async {
+    prefs = await SharedPreferences.getInstance();
+  }
 
   // Save integer set
   static Future<void> saveChargerIntoList(Set<int> intSet) async {
-    final prefs = await SharedPreferences.getInstance();
     List<String> stringList = intSet.map((i) => i.toString()).toList();
-    await prefs.setStringList(_chargerList, stringList);
+    await prefs?.setStringList(_chargerList, stringList);
   }
 
   // Load integer set
   static Future<Set<int>> loadChargerList() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? stringList = prefs.getStringList(_chargerList);
+    List<String>? stringList = prefs?.getStringList(_chargerList);
     if (stringList == null) return <int>{};
     return stringList.map((i) => int.parse(i)).toSet();
   }
@@ -33,22 +35,19 @@ class PreferencesHelper {
     await saveChargerIntoList(intSet);
   }
 
-
-/// For accepted chargers
+  /// For accepted chargers
 
   static const String _acceptedChargerList = 'accepted_charger_list';
 
   // Save integer set
   static Future<void> saveAcceptedChargerList(Set<int> intSet) async {
-    final prefs = await SharedPreferences.getInstance();
     List<String> stringList = intSet.map((i) => i.toString()).toList();
-    await prefs.setStringList(_acceptedChargerList, stringList);
+    await prefs?.setStringList(_acceptedChargerList, stringList);
   }
 
   // Load integer set
   static Future<Set<int>> loadAcceptedChargerList() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? stringList = prefs.getStringList(_acceptedChargerList);
+    List<String>? stringList = prefs?.getStringList(_acceptedChargerList);
     if (stringList == null) return <int>{};
     return stringList.map((i) => int.parse(i)).toSet();
   }
@@ -78,41 +77,34 @@ class PreferencesHelper {
 
   //  Save or update charger status
   static Future<void> saveChargerStatus(int chargerId, String status) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_chargerKeyPrefix$chargerId', status);
+    await prefs?.setString('$_chargerKeyPrefix$chargerId', status);
   }
 
   // Load charger status
   static Future<String?> loadChargerStatus(int chargerId) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('$_chargerKeyPrefix$chargerId');
+    return prefs?.getString('$_chargerKeyPrefix$chargerId');
   }
 
   // Remove charger status
   static Future<void> removeChargerStatus(int chargerId) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('$_chargerKeyPrefix$chargerId');
+    await prefs?.remove('$_chargerKeyPrefix$chargerId');
   }
 
   // Load all charger statuses
   static Future<Map<int, String>> loadAllChargerStatuses() async {
-    final prefs = await SharedPreferences.getInstance();
-    final allKeys = prefs.getKeys();
-    final chargerKeys = allKeys.where((key) => key.startsWith(_chargerKeyPrefix)).toList();
-    print("charger keys $chargerKeys");
+    final allKeys = prefs?.getKeys();
+    final chargerKeys =
+        allKeys?.where((key) => key.startsWith(_chargerKeyPrefix)).toList();
     Map<int, String> chargerStatuses = {};
-    if(chargerKeys.isNotEmpty){
+    if (chargerKeys!.isNotEmpty) {
       for (String key in chargerKeys) {
         final chargerId = int.parse(key.replaceFirst(_chargerKeyPrefix, ''));
-        final status = prefs.getString(key);
+        final status = prefs?.getString(key);
         if (status != null) {
           chargerStatuses[chargerId] = status;
         }
       }
     }
-
-
     return chargerStatuses;
   }
-
 }
