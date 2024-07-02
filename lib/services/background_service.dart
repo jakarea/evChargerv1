@@ -10,6 +10,7 @@ import 'package:ev_charger/utils/log.dart';
 import 'package:ev_charger/services/websocket_handler.dart';
 import 'package:ev_charger/utils/helpers.dart';
 import 'package:ev_charger/utils/internet_connection.dart';
+import 'package:ev_charger/utils/preferences_helper.dart';
 import 'database_helper.dart';
 import 'package:get/get.dart';
 import 'package:ev_charger/services/smtp_service.dart';
@@ -21,6 +22,7 @@ class BackgroundService {
 
   Set<int> _authorizedChargerList = {};
   Map<int, String> _chargerStatuses = {};
+  bool firstTimeBoot = false;
   var timeZone = 'UTC+02:00';
   int counter = 1;
   int randomNumber = 2;
@@ -81,12 +83,22 @@ class BackgroundService {
   }
 
   Future<void> loadSharedPreference() async {
+    PreferencesHelper.saveFirstBootValue("true");
+    if(await PreferencesHelper.loadFirstBootValue() == "true"){
+      firstTimeBoot = true;
+    }
+    if(!firstTimeBoot){
+      helpers.updatingCardDataForFirstTimeBoot();
+    }
+    Log.i("firstTime boot value $firstTimeBoot");
     _chargerStatuses =
         await sharedPreferenceController.loadAllChargerStatuses();
     Log.i("all charger states $_chargerStatuses");
     _authorizedChargerList =
         await sharedPreferenceController.loadAuthorizeChargerList();
   }
+
+
 
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance

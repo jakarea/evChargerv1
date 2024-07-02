@@ -5,8 +5,10 @@ import '../utils/preferences_helper.dart';
 class SharedPreferenceController {
 
   Future<void> cleanSharedPref() async {
+    String? firstBootValue = await PreferencesHelper.loadFirstBootValue();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    PreferencesHelper.saveFirstBootValue(firstBootValue!);
   }
 
   ///for charger state

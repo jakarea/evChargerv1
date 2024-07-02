@@ -3,10 +3,30 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../services/database_helper.dart';
+import 'log.dart';
+
 class Helpers{
 
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
+
+  Future<void> updatingCardDataForFirstTimeBoot() async {
+    var allCards = await DatabaseHelper.instance.getCards();
+    var random = Random();
+
+    allCards.forEach((card) async {
+      // Generate a random duration between 1 to 5 hours (in seconds)
+      int randomHours = random.nextInt(8) + 3;
+      int randomTimeInSeconds = randomHours * 3600;
+
+      int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      int randomUnixTime = currentTime + randomTimeInSeconds;
+
+      await DatabaseHelper.instance.updateTimeField(card['id'], randomUnixTime);
+    });
+    Log.v("updated card data");
+  }
 
   void decideNextTimezoneChangerDate() {
     int currentMonth = DateTime.now().month;

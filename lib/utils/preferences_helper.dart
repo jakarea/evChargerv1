@@ -107,4 +107,14 @@ class PreferencesHelper {
     }
     return chargerStatuses;
   }
+
+  //  Save or update firstBoot status
+  static Future<void> saveFirstBootValue(String firstBoot) async {
+    await prefs?.setString('first_boot', firstBoot);
+  }
+
+  // Load charger status
+  static Future<String?> loadFirstBootValue() async {
+    return prefs?.getString('first_boot');
+  }
 }
