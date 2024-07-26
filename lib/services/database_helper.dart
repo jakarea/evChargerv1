@@ -476,7 +476,7 @@ class DatabaseHelper {
     sessionController.addAllChargers();
   }
 
-  Future<void> updateCardStatus(int cardUid, String status) async {
+  Future<void> updateCardStatus(String cardUid, String status) async {
     Database db = await instance.database;
     final SessionController sessionController = Get.find<SessionController>();
     // print("charger status: $status");

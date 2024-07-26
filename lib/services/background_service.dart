@@ -100,13 +100,13 @@ class BackgroundService {
   }
 
   void startPeriodicTask() async {
+    //await DatabaseHelper.instance.updateTime(1, 1);
     /*await DatabaseHelper.instance
         .deleteNotificationLog(13);*/
-    /*await DatabaseHelper.instance.updateTimeField(1, 1719464496);
-    await DatabaseHelper.instance.updateTimeField(3, 1719464496);
-    await DatabaseHelper.instance.updateTimeField(5, 1719464496);
-    await DatabaseHelper.instance.updateTimeField(7, 1719464496);
-    await DatabaseHelper.instance.updateTimeField(7, 1719464496);*/
+   /* await DatabaseHelper.instance.updateTimeField(1, 1721991494);
+    await DatabaseHelper.instance.updateTimeField(2, 1721991494);
+    await DatabaseHelper.instance.updateTimeField(3, 1721991494);*/
+
     // await DatabaseHelper.instance.updateChargingStatus(1, "start", 0);
     // await DatabaseHelper.instance.updateChargerStatus(1, "2");
 
@@ -211,6 +211,7 @@ class BackgroundService {
           bool connected =
               await checkInternetConnection.hasInternetConnection();
 
+          loadSharedPreference();
           /**for acceptedModel*/
           Log.v(
               "${chargerViewModel.id}  acceptedList ${webSocketHandler.getAcceptedChargerList}");
@@ -226,7 +227,7 @@ class BackgroundService {
           }
 
           Log.v(
-              "${chargerViewModel.id} acceptedModel $accepted authorize $authorize");
+              "${chargerViewModel.id} acceptedModel $accepted authorize $authorize blockedInfo ${webSocketHandler.isBlocked}");
 
           if (cardData != null && connected && accepted && !authorize) {
             Log.i("step 3 if block");
@@ -333,10 +334,24 @@ class BackgroundService {
             await helpers.delayInSeconds(detectionDelay + 1);
 
             // ignore: unrelated_type_equality_checks
-            if (blocked) {
+            if (webSocketHandler.isBlocked) {
               Log.i(
-                  "$blocked updating response status in if ${responseStatus[chargerViewModel.id!]}");
-              // TODO: and send mail to admin
+                  "$webSocketHandler.blocked updating response status in if ${responseStatus[chargerViewModel.id!]}");
+              nextSession[chargerViewModel.id!] =
+                  helpers.getRandomSessionRestTime(
+                      numberOfCharge[chargerViewModel.id!],
+                      numberOfChargeDays[chargerViewModel.id!],
+                      randomTime[chargerViewModel.id!]);
+
+              await DatabaseHelper.instance
+                  .updateTimeField(card.id!, nextSession[chargerViewModel.id!]);
+
+              await ocppService.sendStatusNotification(chargerViewModel.id!,
+                  "StatusNotification", "Available", "", "", "", 0, 1);
+
+              await ocppService.sendHeartbeat(chargerViewModel.id!);
+              sharedPreferenceController.saveChargerStatus(
+                  chargerViewModel.id!, 'heartbeat');
             } else {
               Log.i("Step 7 for : ${chargerViewModel.id}\n");
               /*chargerState[chargerViewModel.id!] = 'charging';*/
@@ -782,7 +797,7 @@ class BackgroundService {
     }
   }
 
-  /* Future<void> blockedChargerHandle(int chargerId) async {
+/* Future<void> blockedChargerHandle(int chargerId) async {
     Map<String, dynamic>? cardData =
         await DatabaseHelper.instance.getCardByChargerId(chargerId);
     CardViewModel card = CardViewModel.fromJson(cardData!);

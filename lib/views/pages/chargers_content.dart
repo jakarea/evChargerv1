@@ -399,7 +399,7 @@ class _ChargersContentState extends State<ChargersContent>
                       Color backgroundColor = Colors.grey; // Default color
                       switch (sessionCharger.status) {
                         case "0":
-                          backgroundColor = Colors.red;
+                          backgroundColor = Colors.green;
                           break;
                         case "1":
                           backgroundColor = Colors.blue;

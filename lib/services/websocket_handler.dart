@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:ev_charger/utils/helpers.dart';
+import 'package:ev_charger/services/smtp_service.dart';
 import 'package:ev_charger/utils/internet_connection.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../controllers/sharedPreference_controller.dart';
+import '../models/card_view_model.dart';
+import '../models/chargers_view_model.dart';
 import '../utils/log.dart';
 import 'database_helper.dart';
 
@@ -32,7 +34,6 @@ class WebSocketHandler with ChangeNotifier {
   final SharedPreferenceController sharedPreferenceController =
       SharedPreferenceController();
   //final OCPPService ocppService = OCPPService();
-  //final Helpers helpers = Helpers();
 
   Future<void> loadAcceptedChargers() async {
     _acceptedChargerList =
@@ -63,14 +64,13 @@ class WebSocketHandler with ChangeNotifier {
 
       channel.stream.listen((data) async {
         dynamic decodedData = jsonDecode(data);
-        print("$chargerId Received: ${decodedData}\n");
+        Log.i("$chargerId Received: $decodedData \n");
         if (decodedData[0] != 3) {
           await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
         }
 
         if (decodedData is List && decodedData.length >= 3) {
-          print("status check ${decodedData[2]}");
-
+          blocked = false;
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('transactionId')) {
             updateTransactionId(chargerId, decodedData[2]['transactionId']);
@@ -79,7 +79,7 @@ class WebSocketHandler with ChangeNotifier {
           /**checking accepted status*/
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('status') &&
-              decodedData[2]['status'] == 'Accepted') {
+              decodedData[2]['status'] == 'Accepted' ) {
             addAcceptedCharger(chargerId);
             sharedPreferenceController.addToAcceptedList(chargerId);
           }
@@ -90,27 +90,23 @@ class WebSocketHandler with ChangeNotifier {
               decodedData[2].containsKey('idTagInfo') &&
               decodedData[2]['idTagInfo'] is Map &&
               decodedData[2]['idTagInfo'].containsKey('status')) {
-            debugPrint("before blocked state");
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
-            debugPrint("before blocked status $status");
             if (responseStatus[chargerId] == 'Blocked' ||
                 responseStatus[chargerId] == 'Invalid') {
               blocked = true;
-              var detectionDelay = Random().nextInt(2);
-              await delayInSeconds(detectionDelay + 1);
-              Helpers().blockedChargerHandle(chargerId);
-              debugPrint("inside blocked state");
-              //helpers.blockedChargerHandle(chargerId);
+              notifyListeners();
+
+              blockedChargerHandle(chargerId);
+              sharedPreferenceController
+                  .removeFromAuthorizeList(chargerId);
             } else {
               blocked = false;
+              notifyListeners();
             }
           }
+          Log.i("blocked status $blocked");
 
-          /**checking index 2 and its status for stopChargingImmediately*/
-          if ((decodedData[2] as Map).isEmpty) {
-            //stopChargingImmediately(chargerId);
-          }
         }
       }, onDone: () {
         _socketConnected = false;
@@ -155,47 +151,36 @@ class WebSocketHandler with ChangeNotifier {
     await Future.delayed(Duration(seconds: seconds));
   }
 
-  // Future<void> blockedChargerHandle(int chargerId) async {
-  //   Map<String, dynamic>? cardData =
-  //       await DatabaseHelper.instance.getCardByChargerId(chargerId);
-  //   CardViewModel card = CardViewModel.fromJson(cardData!);
+  Future<void> blockedChargerHandle(int chargerId) async {
+    Log.i("block action start");
+    Map<String, dynamic>? cardData =
+        await DatabaseHelper.instance.getCardByChargerId(chargerId);
+    CardViewModel card = CardViewModel.fromJson(cardData!);
 
-  //   // for charger
-  //   Map<String, dynamic>? chargerData =
-  //       await DatabaseHelper.instance.getChargerById(chargerId);
-  //   ChargersViewModel charger = ChargersViewModel.fromJson(chargerData!);
-  //   // TODO: and send mail to admin
-  //   var uid = card.uid;
-  //   var chargeBoxNumber = charger.chargeBoxSerialNumber;
-  //   var cardNumber = card.cardNumber;
-  //   var msp = card.msp;
+    // for charger
+    Map<String, dynamic>? chargerData =
+        await DatabaseHelper.instance.getChargerById(chargerId);
+    ChargersViewModel charger = ChargersViewModel.fromJson(chargerData!);
+    // TODO: and send mail to admin
+    var uid = card.uid;
+    var chargeBoxNumber = charger.chargeBoxSerialNumber;
+    var cardNumber = card.cardNumber;
+    var msp = card.msp;
 
-  //   /**updating charger status*/
-  //   await DatabaseHelper.instance.updateChargingStatus(chargerId, "Start", -1);
-  //   await DatabaseHelper.instance.updateCardStatus(chargerId, "0");
+    /**updating charger status*/
+    await DatabaseHelper.instance.updateChargingStatus(chargerId, "Start", -1);
+    await DatabaseHelper.instance.updateCardStatus(uid, "0");
 
-  //   SmtpService.sendEmail(
-  //       subject: 'Card Blocked',
-  //       text: "$uid has blocked!",
-  //       headerText: "BoxSerialNumber: $chargeBoxNumber",
-  //       contentText: "MSP: $msp <br> Card Number: $cardNumber");
+    SmtpService.sendEmail(
+        subject: 'Card Blocked',
+        text: "$uid has blocked!",
+        headerText: "BoxSerialNumber: $chargeBoxNumber",
+        contentText: "MSP: $msp <br> Card Number: $cardNumber");
 
-  //   // nextSession[chargerId] = helpers.getRandomSessionRestTime(
-  //   //     numberOfCharge[chargerId],
-  //   //     numberOfChargeDays[chargerId],
-  //   //     randomTime[chargerId]);
 
-  //   // await DatabaseHelper.instance
-  //   //     .updateTimeField(card.id!, nextSession[chargerId]);
-  //   await DatabaseHelper.instance.updateChargerId(card.id!, '');
+    await DatabaseHelper.instance.updateChargerId(card.id!, '');
 
-  //   await ocppService.sendStatusNotification(
-  //       chargerId, "StatusNotification", "Available", "", "", "", 0, 1);
-
-  //   await ocppService.sendHeartbeat(chargerId);
-  //   sharedPreferenceController.saveChargerStatus(chargerId, 'heartbeat');
-  //   /*chargerState[chargerId] = 'heartbeat';*/
-  // }
+  }
 }
 
 class ChargerData {

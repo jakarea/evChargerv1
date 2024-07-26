@@ -1,10 +1,6 @@
 import 'dart:math';
 
 import 'package:ev_charger/controllers/sharedPreference_controller.dart';
-import 'package:ev_charger/models/card_view_model.dart';
-import 'package:ev_charger/models/chargers_view_model.dart';
-import 'package:ev_charger/services/ocpp_service.dart';
-import 'package:ev_charger/services/smtp_service.dart';
 import 'package:flutter/material.dart';
 
 import '../services/database_helper.dart';
@@ -14,51 +10,8 @@ class Helpers {
   String nextTimezone = 'UTC+01:00';
   int nextTimezoneChange = 0;
 
-  final OCPPService ocppService = OCPPService();
   final SharedPreferenceController sharedPreferenceController =
       SharedPreferenceController();
-
-  Future<void> blockedChargerHandle(int chargerId) async {
-    Map<String, dynamic>? cardData =
-        await DatabaseHelper.instance.getCardByChargerId(chargerId);
-    CardViewModel card = CardViewModel.fromJson(cardData!);
-
-    // for charger
-    Map<String, dynamic>? chargerData =
-        await DatabaseHelper.instance.getChargerById(chargerId);
-    ChargersViewModel charger = ChargersViewModel.fromJson(chargerData!);
-    // TODO: and send mail to admin
-    var uid = card.uid;
-    var chargeBoxNumber = charger.chargeBoxSerialNumber;
-    var cardNumber = card.cardNumber;
-    var msp = card.msp;
-
-    /**updating charger status*/
-    await DatabaseHelper.instance.updateChargingStatus(chargerId, "Start", -1);
-    await DatabaseHelper.instance.updateCardStatus(chargerId, "0");
-
-    SmtpService.sendEmail(
-        subject: 'Card Blocked',
-        text: "$uid has blocked!",
-        headerText: "BoxSerialNumber: $chargeBoxNumber",
-        contentText: "MSP: $msp <br> Card Number: $cardNumber");
-
-    // nextSession[chargerId] = helpers.getRandomSessionRestTime(
-    //     numberOfCharge[chargerId],
-    //     numberOfChargeDays[chargerId],
-    //     randomTime[chargerId]);
-
-    // await DatabaseHelper.instance
-    //     .updateTimeField(card.id!, nextSession[chargerId]);
-    await DatabaseHelper.instance.updateChargerId(card.id!, '');
-
-    await ocppService.sendStatusNotification(
-        chargerId, "StatusNotification", "Available", "", "", "", 0, 1);
-
-    await ocppService.sendHeartbeat(chargerId);
-    sharedPreferenceController.saveChargerStatus(chargerId, 'heartbeat');
-    /*chargerState[chargerId] = 'heartbeat';*/
-  }
 
   Future<void> updatingCardDataForFirstTimeBoot() async {
     var allCards = await DatabaseHelper.instance.getCards();

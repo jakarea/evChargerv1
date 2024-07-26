@@ -91,7 +91,7 @@ class CardViewModel {
       times: json['times'],
       daysFrom: json['days_from'],
       daysUntil: json['days_until'],
-      status: "",
+      status: json['status'],
       beginMeterValue: json['begin_meter_value'],
       lastMeterValue: json['last_meter_value'],
       chargerId: json['charger_id'],
