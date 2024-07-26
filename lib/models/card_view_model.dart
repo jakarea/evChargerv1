@@ -1,4 +1,4 @@
-class CardViewModel{
+class CardViewModel {
   final int? id;
   final String cardNumber;
   final String msp;
@@ -18,37 +18,38 @@ class CardViewModel{
   final String times;
   final String daysFrom;
   final String daysUntil;
+  final String? status;
   final String? chargerId;
   bool? isEdit;
   bool? isDuplicate;
 
-  CardViewModel({
-    this.id,
-    required this.cardNumber,
-    required this.msp,
-    required this.uid,
-    required this.minKwhPerSession,
-    required this.maxKwhPerSession,
-    this.minSessionTime,
-    this.maxSessionTime,
-    required this.usageHours,
-    this.groupName,
-    this.groupId,
-    this.minIntervalBeforeReuse,
-    required this.reference,
-    this.time,
-    this.beginMeterValue,
-    this.lastMeterValue,
-    required this.times,
-    required this.daysFrom,
-    required this.daysUntil,
-    this.chargerId,
-    this.isEdit = true,
-    this.isDuplicate = false
-  });
+  CardViewModel(
+      {this.id,
+      required this.cardNumber,
+      required this.msp,
+      required this.uid,
+      required this.minKwhPerSession,
+      required this.maxKwhPerSession,
+      this.minSessionTime,
+      this.maxSessionTime,
+      required this.usageHours,
+      this.groupName,
+      this.groupId,
+      this.minIntervalBeforeReuse,
+      required this.reference,
+      this.time,
+      this.beginMeterValue,
+      this.lastMeterValue,
+      required this.times,
+      required this.daysFrom,
+      required this.daysUntil,
+      this.status,
+      this.chargerId,
+      this.isEdit = true,
+      this.isDuplicate = false});
 
   /// Converting data to json format
-  Map<String, dynamic> toJson(){
+  Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
 
     data['card_number'] = cardNumber;
@@ -71,25 +72,26 @@ class CardViewModel{
   }
 
   /// Factory constructor to create a GroupViewModel from a Map
-  factory CardViewModel.fromJson(Map<String, dynamic> json){
+  factory CardViewModel.fromJson(Map<String, dynamic> json) {
     return CardViewModel(
       id: json['id'],
       cardNumber: json['card_number'],
-      msp: json ['msp'],
-      uid: json ['uid'],
-      minKwhPerSession: json ['min_kwh_per_session'],
-      maxKwhPerSession: json ['max_kwh_per_session'],
+      msp: json['msp'],
+      uid: json['uid'],
+      minKwhPerSession: json['min_kwh_per_session'],
+      maxKwhPerSession: json['max_kwh_per_session'],
       minSessionTime: json['min_session_time'],
       maxSessionTime: json['max_session_time'],
-      usageHours: json ['usage_hours'],
+      usageHours: json['usage_hours'],
       groupId: json['group_id'],
-      groupName: json ['group_name'],
-      minIntervalBeforeReuse: json ['min_interval_before_reuse'],
-      reference: json ['reference'],
+      groupName: json['group_name'],
+      minIntervalBeforeReuse: json['min_interval_before_reuse'],
+      reference: json['reference'],
       time: json['time'],
       times: json['times'],
       daysFrom: json['days_from'],
       daysUntil: json['days_until'],
+      status: "",
       beginMeterValue: json['begin_meter_value'],
       lastMeterValue: json['last_meter_value'],
       chargerId: json['charger_id'],

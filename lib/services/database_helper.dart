@@ -105,6 +105,7 @@ class DatabaseHelper {
         times TEXT NOT NULL,
         days_from TEXT NOT NULL,
         days_until TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT "1",
         charger_id TEXT NOT NULL DEFAULT "",
         FOREIGN KEY(group_id) REFERENCES groups(id)
       )
@@ -475,6 +476,21 @@ class DatabaseHelper {
     sessionController.addAllChargers();
   }
 
+  Future<void> updateCardStatus(int cardUid, String status) async {
+    Database db = await instance.database;
+    final SessionController sessionController = Get.find<SessionController>();
+    // print("charger status: $status");
+    // Update statement
+    await db.update(
+      'cards', // Table name
+      {'status': status}, // Values to update
+      where: 'uid = ?', // Condition to find the right row
+      whereArgs: [cardUid], // Values for where condition
+    );
+
+    sessionController.addAllChargers();
+  }
+
   Future<void> updateChargingStatus(
       int chargerId, String chargingStatus, int stop) async {
     // print("chargingStatus status: $chargingStatus for $chargerId");
@@ -834,7 +850,6 @@ class DatabaseHelper {
         whereArgs: [chargerId], // Values for where condition
       );
     }
-
   }
 
   ///.......................notification log...................///

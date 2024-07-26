@@ -13,7 +13,6 @@ import 'package:ev_charger/utils/internet_connection.dart';
 import 'package:ev_charger/utils/preferences_helper.dart';
 import 'database_helper.dart';
 import 'package:get/get.dart';
-import 'package:ev_charger/services/smtp_service.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 
@@ -63,10 +62,12 @@ class BackgroundService {
 
   static const Duration delayDuration = Duration(seconds: 3);
 
-  final SharedPreferenceController sharedPreferenceController = SharedPreferenceController();
+  final SharedPreferenceController sharedPreferenceController =
+      SharedPreferenceController();
   final WebSocketHandler webSocketHandler = WebSocketHandler();
   final OCPPService ocppService = OCPPService();
-  final CheckInternetConnection checkInternetConnection = CheckInternetConnection();
+  final CheckInternetConnection checkInternetConnection =
+      CheckInternetConnection();
   final Helpers helpers = Helpers();
 
   factory BackgroundService() {
@@ -84,10 +85,10 @@ class BackgroundService {
 
   Future<void> loadSharedPreference() async {
     PreferencesHelper.saveFirstBootValue("true");
-    if(await PreferencesHelper.loadFirstBootValue() == "true"){
+    if (await PreferencesHelper.loadFirstBootValue() == "true") {
       firstTimeBoot = true;
     }
-    if(!firstTimeBoot){
+    if (!firstTimeBoot) {
       helpers.updatingCardDataForFirstTimeBoot();
     }
     Log.i("firstTime boot value $firstTimeBoot");
@@ -98,8 +99,6 @@ class BackgroundService {
         await sharedPreferenceController.loadAuthorizeChargerList();
   }
 
-
-
   void startPeriodicTask() async {
     /*await DatabaseHelper.instance
         .deleteNotificationLog(13);*/
@@ -108,6 +107,8 @@ class BackgroundService {
     await DatabaseHelper.instance.updateTimeField(5, 1719464496);
     await DatabaseHelper.instance.updateTimeField(7, 1719464496);
     await DatabaseHelper.instance.updateTimeField(7, 1719464496);*/
+    // await DatabaseHelper.instance.updateChargingStatus(1, "start", 0);
+    // await DatabaseHelper.instance.updateChargerStatus(1, "2");
 
     int time = 0;
     timeZone = await DatabaseHelper.instance.getUtcTime();
@@ -117,7 +118,8 @@ class BackgroundService {
       time++;
       DateTime utcNow = DateTime.now().toUtc();
       int utcNotInSec = utcNow.millisecondsSinceEpoch ~/ 1000;
-      if (helpers.nextTimezoneChange != 0 && helpers.nextTimezoneChange <= utcNotInSec) {
+      if (helpers.nextTimezoneChange != 0 &&
+          helpers.nextTimezoneChange <= utcNotInSec) {
         await DatabaseHelper.instance.insertOrReplaceTimeFormat(timeZone);
         helpers.decideNextTimezoneChangerDate();
       }
@@ -167,7 +169,8 @@ class BackgroundService {
   }
 
   Future<void> sendNewChargerBootNotification(ChargersViewModel charger) async {
-    await webSocketHandler.connectToWebSocket(charger.urlToConnect!, charger.id!);
+    await webSocketHandler.connectToWebSocket(
+        charger.urlToConnect!, charger.id!);
     // BootNotification for newly added charger
     await sendBootNotification(charger);
     sharedPreferenceController.saveChargerStatus(charger.id!, 'heartbeat');
@@ -209,9 +212,11 @@ class BackgroundService {
               await checkInternetConnection.hasInternetConnection();
 
           /**for acceptedModel*/
-          Log.v("${chargerViewModel.id}  acceptedList ${webSocketHandler.getAcceptedChargerList}");
+          Log.v(
+              "${chargerViewModel.id}  acceptedList ${webSocketHandler.getAcceptedChargerList}");
           bool accepted = false;
-          if (webSocketHandler.getAcceptedChargerList.contains(chargerViewModel.id)) {
+          if (webSocketHandler.getAcceptedChargerList
+              .contains(chargerViewModel.id)) {
             accepted = true;
           }
           /**for authorizeModel*/
@@ -346,15 +351,23 @@ class BackgroundService {
               final SessionController sessionController =
                   Get.find<SessionController>();
 
-              nextSession[chargerViewModel.id!] = helpers.getRandomSessionRestTime(
-                  numberOfCharge[chargerViewModel.id!],
-                  numberOfChargeDays[chargerViewModel.id!],
-                  randomTime[chargerViewModel.id!]);
+              nextSession[chargerViewModel.id!] =
+                  helpers.getRandomSessionRestTime(
+                      numberOfCharge[chargerViewModel.id!],
+                      numberOfChargeDays[chargerViewModel.id!],
+                      randomTime[chargerViewModel.id!]);
               await DatabaseHelper.instance.updateTimeField(
                   card.id!, //cardId[chargerViewModel.id!]
                   nextSession[chargerViewModel.id!]);
-              await ocppService.sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
-                  "", "", "", "", randomTime[chargerViewModel.id!], 1);
+              await ocppService.sendStatusNotification(
+                  chargerViewModel.id!,
+                  "SuspendedEV",
+                  "",
+                  "",
+                  "",
+                  "",
+                  randomTime[chargerViewModel.id!],
+                  1);
 
               Log.i("Step 8  for : ${chargerViewModel.id}\n");
               detectionDelay = Random().nextInt(3);
@@ -389,7 +402,8 @@ class BackgroundService {
                   cardNumber: card.cardNumber,
                   msp: card.msp,
                   uid: card.uid,
-                  transactionId: webSocketHandler.getTransactionId[chargerViewModel.id!]!,
+                  transactionId:
+                      webSocketHandler.getTransactionId[chargerViewModel.id!]!,
                   transactionSession:
                       (now.millisecondsSinceEpoch ~/ 1000).toInt(),
                   kwh: randomKw[chargerViewModel.id!].toString(),
@@ -442,7 +456,8 @@ class BackgroundService {
                   messageId: ocppService.messageId[chargerViewModel.id!],
                   chargerId: chargerViewModel.id!,
                   uid: cardUId[chargerViewModel.id!],
-                  transactionId: webSocketHandler.getTransactionId[chargerViewModel.id!]!,
+                  transactionId:
+                      webSocketHandler.getTransactionId[chargerViewModel.id!]!,
                   meterValue: sumKwh[chargerViewModel.id!],
                   beginMeterValue: beginMeterValue[chargerViewModel.id!],
                   startTime: ocppService.startTime[chargerViewModel.id!],
@@ -539,7 +554,8 @@ class BackgroundService {
                 messageId: ocppService.messageId[chargerViewModel.id!],
                 chargerId: chargerViewModel.id!,
                 uid: cardUId[chargerViewModel.id!],
-                transactionId: webSocketHandler.getTransactionId[chargerViewModel.id!]!,
+                transactionId:
+                    webSocketHandler.getTransactionId[chargerViewModel.id!]!,
                 meterValue: sumKwh[chargerViewModel.id!],
                 beginMeterValue: beginMeterValue[chargerViewModel.id!],
                 startTime: ocppService.startTime[chargerViewModel.id!],
@@ -575,8 +591,15 @@ class BackgroundService {
             sumKwh[chargerViewModel.id!] = sumKwh[chargerViewModel.id!] +
                 (lastNotificationTimeDiff[chargerViewModel.id!] *
                     wPerSec[chargerViewModel.id!]);
-            await ocppService.sendStatusNotification(chargerViewModel.id!, "SuspendedEV",
-                "", "", "", "", randomTime[chargerViewModel.id!], 1);
+            await ocppService.sendStatusNotification(
+                chargerViewModel.id!,
+                "SuspendedEV",
+                "",
+                "",
+                "",
+                "",
+                randomTime[chargerViewModel.id!],
+                1);
             await DatabaseHelper.instance
                 .deleteNotificationLog(chargerViewModel.id!);
 
@@ -671,9 +694,8 @@ class BackgroundService {
 
           break;
         default:
-
           await webSocketHandler.connectToWebSocket(
-                  chargerViewModel.urlToConnect!, chargerViewModel.id!);
+              chargerViewModel.urlToConnect!, chargerViewModel.id!);
 
           await DatabaseHelper.instance
               .updateChargerStatus(chargerViewModel.id!, "2");
@@ -760,8 +782,7 @@ class BackgroundService {
     }
   }
 
-
-  Future<void> blockedChargerHandle(int chargerId) async {
+  /* Future<void> blockedChargerHandle(int chargerId) async {
     Map<String, dynamic>? cardData =
         await DatabaseHelper.instance.getCardByChargerId(chargerId);
     CardViewModel card = CardViewModel.fromJson(cardData!);
@@ -773,7 +794,7 @@ class BackgroundService {
 
     /**updating charger status*/
     await DatabaseHelper.instance.updateChargingStatus(chargerId, "Start", -1);
-    await DatabaseHelper.instance.updateChargerStatus(chargerId, "0");
+    await DatabaseHelper.instance.updateCardStatus(chargerId, "0");
 
     SmtpService.sendEmail(
         subject: 'Card Blocked',
@@ -787,7 +808,7 @@ class BackgroundService {
         randomTime[chargerId]);
 
     await DatabaseHelper.instance
-        .updateTimeField(cardId[chargerId], nextSession[chargerId]);
+        .updateTimeField(card.id!, nextSession[chargerId]);
     await DatabaseHelper.instance.updateChargerId(card.id!, '');
 
     await ocppService.sendStatusNotification(
@@ -796,5 +817,5 @@ class BackgroundService {
     await ocppService.sendHeartbeat(chargerId);
     sharedPreferenceController.saveChargerStatus(chargerId, 'heartbeat');
     /*chargerState[chargerId] = 'heartbeat';*/
-  }
+  }*/
 }

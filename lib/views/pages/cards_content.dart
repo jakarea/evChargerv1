@@ -18,7 +18,8 @@ class CardsContent extends StatefulWidget {
   State<CardsContent> createState() => _CardsContentState();
 }
 
-class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver {
+class _CardsContentState extends State<CardsContent>
+    with WidgetsBindingObserver {
   final SettingsController settingsController = Get.find<SettingsController>();
 
   TextEditingController pageCounterController = TextEditingController();
@@ -29,7 +30,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
   String searchText = '';
 
   bool isFetching =
-  false; // To keep track of whether data is currently being fetched
+      false; // To keep track of whether data is currently being fetched
   int itemsPerPage = 10; // The number of items to display per page
   int currentPage = 1; // The current page number
   bool hasMoreData = true;
@@ -46,7 +47,6 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
       }
     });
     _fetchPage(1);
-
   }
 
   @override
@@ -67,7 +67,6 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
     });
   }
 
-
   /// Dynamically adjusts pagination based on screen height and estimated item height.
   void _adjustItemsPerPage() {
     if (!mounted) return;
@@ -75,7 +74,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
     final screenHeight = MediaQuery.of(context).size.height;
     const estimatedItemHeight = 65.0; // Adjust based on your list item height
     const navBarHeight =
-    45.0; // If you have a navigation bar or other UI elements taking up vertical space
+        45.0; // If you have a navigation bar or other UI elements taking up vertical space
 
     setState(() {
       itemsPerPage =
@@ -91,9 +90,8 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
     List<Map<String, dynamic>> cardMaps = await DatabaseHelper.instance
         .getCardPaginated(pageNumber, itemsPerPage);
 
-    List<CardViewModel> pageCard = cardMaps
-        .map((cardMap) => CardViewModel.fromJson(cardMap))
-        .toList();
+    List<CardViewModel> pageCard =
+        cardMaps.map((cardMap) => CardViewModel.fromJson(cardMap)).toList();
 
     if (mounted) {
       setState(() {
@@ -119,8 +117,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
     pageCounterController.text = currentPage.toString();
     // Fetch the first page of filtered results from the database
     List<Map<String, dynamic>> filteredCards = await DatabaseHelper.instance
-        .getCardPaginated(currentPage, itemsPerPage,
-        searchQuery: searchText);
+        .getCardPaginated(currentPage, itemsPerPage, searchQuery: searchText);
 
     setState(() {
       // Update the cards list with the new filtered and paginated results
@@ -141,8 +138,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
   /// This method is invoked to reload the card list, for example, after a new card is added.
   void _onCardAdded() {
     _fetchPage(currentPage);
-    selectedCard =
-    [];
+    selectedCard = [];
   }
 
   /// calculating the total pages
@@ -153,7 +149,14 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
     });
   }
 
-  void _updateCardValues(bool newMinKwh, bool newMaxKwh, bool newMaxSessionTime, bool newUsageHour, bool newMinInterval, bool newReference, bool newGroupCard) {
+  void _updateCardValues(
+      bool newMinKwh,
+      bool newMaxKwh,
+      bool newMaxSessionTime,
+      bool newUsageHour,
+      bool newMinInterval,
+      bool newReference,
+      bool newGroupCard) {
     settingsController.updateCardSettings(
       newMinKwh,
       newMaxKwh,
@@ -181,23 +184,24 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
                       // This method filters the customer list based on the input.
                       filterCards(text);
                     },
-                    onCleared: onCleared
-                ),
+                    onCleared: onCleared),
               ),
-              SizedBox(width: 12,),
+              SizedBox(
+                width: 12,
+              ),
               Button(
-                  child: Text(
-                      "Add Card"
-                  ),
+                  child: Text("Add Card"),
                   onPressed: () {
-                    CardDialog.show(context,
+                    CardDialog.show(
+                      context,
                       _onCardAdded,
                     );
-                  }
-              )
+                  })
             ],
           ),
-          SizedBox(height: 12,),
+          SizedBox(
+            height: 12,
+          ),
           Align(
             alignment: Alignment.centerLeft,
             child: Button(
@@ -205,120 +209,128 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text("Filter"),
-                    SizedBox(width: 5,),
+                    SizedBox(
+                      width: 5,
+                    ),
                     Icon(FluentIcons.filter)
                   ],
                 ),
                 onPressed: () {
                   CardSettingsDialog.show(
                     context,
-                    _updateCardValues,  // Make sure to define this method to handle updates from CardSettingsDialog
+                    _updateCardValues, // Make sure to define this method to handle updates from CardSettingsDialog
                     initialMinKwh: settingsController.minKwh.value,
                     initialMaxKwh: settingsController.maxKwh.value,
-                    initialMaxSessionTime: settingsController.maxSessionTime.value,
+                    initialMaxSessionTime:
+                        settingsController.maxSessionTime.value,
                     initialUsageHour: settingsController.usageHour.value,
                     initialMinInterval: settingsController.minInterVal.value,
                     initialReference: settingsController.reference.value,
                     initialGroupCard: settingsController.groupCard.value,
                   );
-                }
-
-            ),
+                }),
           ),
           ListTile.selectable(
-            title: Row(
-              children: [
-                Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Card No.",
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    )),
-                Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("MSP",
-                        style: TextStyle(fontSize: 14),),
-                    )),
-                Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("UID",
-                        style: TextStyle(fontSize: 14),),
-                    )),
-                Obx(() => Visibility(
-                  visible: settingsController.minKwh.value,
-                  child: Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Min kWh per session", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-
-                Obx(() => Visibility(
-                  visible: settingsController.maxKwh.value,
-                  child: Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Max kWh per session", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-
-                Obx(() => Visibility(
-                  visible: settingsController.maxSessionTime.value,
-                  child: Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Max session time", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-
-                Obx(() => Visibility(
-                  visible: settingsController.usageHour.value,
-                  child: Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Usage Hours", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-                Obx(() => Visibility(
-                  visible: settingsController.reference.value,
-                  child: Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Reference", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-
-                Obx(() => Visibility(
-                  visible: settingsController.groupCard.value, // Assuming 'groupCard' controls the visibility of the "Group" text
-                  child: Expanded(
-                    flex: 3,
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Group", style: TextStyle(fontSize: 14)),
-                    ),
-                  ),
-                )),
-
-              ],
-            ),
-            selected: selectedCard.length == cards.length,
-            selectionMode: ListTileSelectionMode.multiple,
+              title: Row(
+                children: [
+                  Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          "Card No.",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      )),
+                  Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          "MSP",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      )),
+                  Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          "UID",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.minKwh.value,
+                        child: Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text("Min kWh per session",
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.maxKwh.value,
+                        child: Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text("Max kWh per session",
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.maxSessionTime.value,
+                        child: Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text("Max session time",
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.usageHour.value,
+                        child: Expanded(
+                          flex: 5,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text("Usage Hours",
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.reference.value,
+                        child: Expanded(
+                          flex: 5,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text("Reference",
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                  Obx(() => Visibility(
+                        visible: settingsController.groupCard
+                            .value, // Assuming 'groupCard' controls the visibility of the "Group" text
+                        child: Expanded(
+                          flex: 3,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child:
+                                Text("Group", style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                      )),
+                ],
+              ),
+              selected: selectedCard.length == cards.length,
+              selectionMode: ListTileSelectionMode.multiple,
               onSelectionChange: (selected) {
                 setState(() {
                   if (selected) {
@@ -331,8 +343,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
                     selectedCard.clear();
                   }
                 });
-              }
-          ),
+              }),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: 20),
@@ -340,94 +351,120 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
                 itemCount: cards.length,
                 itemBuilder: (context, index) {
                   final card = cards[index];
+                  Color backgroundColor = Colors.transparent; // Default color
+                  switch (card.status) {
+                    case "0":
+                      backgroundColor = Colors.red;
+                      break;
+                    case "1":
+                      backgroundColor = Colors.transparent;
+                      break;
+                  }
                   return ListTile.selectable(
-                    title: Row(
-                      children: [
-                        Expanded(
-                            flex: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.cardNumber,
-                                style: TextStyle(fontSize: 12),),
-                            )),
-                        Expanded(
-                            flex: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.msp,
-                                style: TextStyle(fontSize: 12),),
-                            )),
-                        Expanded(
-                            flex: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.uid,
-                                style: TextStyle(fontSize: 12),),
-                            )),
-
-                        Obx(() => Visibility(
-                          visible: settingsController.minKwh.value,
-                          child: Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.minKwhPerSession, style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-                        Obx(() => Visibility(
-                          visible: settingsController.maxKwh.value,
-                          child: Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.maxKwhPerSession, style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-
-                        Obx(() => Visibility(
-                          visible: settingsController.maxSessionTime.value,
-                          child: Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text((double.parse(card.maxSessionTime!) / 60).toStringAsFixed(2), style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-                        Obx(() => Visibility(
-                          visible: settingsController.usageHour.value,
-                          child: Expanded(
-                            flex: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.usageHours, style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-                        Obx(() => Visibility(
-                          visible: settingsController.reference.value,
-                          child: Expanded(
-                            flex: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.reference, style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-                        Obx(() => Visibility(
-                          visible: settingsController.groupCard.value,
-                          child: Expanded(
-                            flex: 3,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(card.groupName.toString(), style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                        )),
-                      ],
-                    ),
+                      title: Container(
+                        color: backgroundColor,
+                        child: Row(
+                          children: [
+                            Expanded(
+                                flex: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    card.cardNumber,
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                )),
+                            Expanded(
+                                flex: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    card.msp,
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                )),
+                            Expanded(
+                                flex: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    card.uid,
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible: settingsController.minKwh.value,
+                                  child: Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(card.minKwhPerSession,
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible: settingsController.maxKwh.value,
+                                  child: Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(card.maxKwhPerSession,
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible:
+                                      settingsController.maxSessionTime.value,
+                                  child: Expanded(
+                                    flex: 2,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                          (double.parse(card.maxSessionTime!) /
+                                                  60)
+                                              .toStringAsFixed(2),
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible: settingsController.usageHour.value,
+                                  child: Expanded(
+                                    flex: 5,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(card.usageHours,
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible: settingsController.reference.value,
+                                  child: Expanded(
+                                    flex: 5,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(card.reference,
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                            Obx(() => Visibility(
+                                  visible: settingsController.groupCard.value,
+                                  child: Expanded(
+                                    flex: 3,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(card.groupName.toString(),
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                )),
+                          ],
+                        ),
+                      ),
                       selected: selectedCard.contains(card),
                       selectionMode: ListTileSelectionMode.multiple,
                       onSelectionChange: (selected) {
@@ -438,8 +475,7 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
                             selectedCard.remove(card);
                           }
                         });
-                      }
-                  );
+                      });
                 },
               ),
             ),
@@ -471,90 +507,95 @@ class _CardsContentState extends State<CardsContent> with WidgetsBindingObserver
             },
             pageCounterController: pageCounterController,
           ),
-          SizedBox(height: 10,),
+          SizedBox(
+            height: 10,
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Button(child: Text("Duplicate"),
-                  onPressed: selectedCard.length != 1 ? null :
-                      (){
-                    if (selectedCard.length == 1) {
-                      // ChargersViewModel chargerViewModel =
-                      // selectedCharger[0];
+              Button(
+                  child: Text("Duplicate"),
+                  onPressed: selectedCard.length != 1
+                      ? null
+                      : () {
+                          if (selectedCard.length == 1) {
+                            // ChargersViewModel chargerViewModel =
+                            // selectedCharger[0];
 
-                      CardViewModel cardVewModel = CardViewModel(
-                          cardNumber: selectedCard[0].cardNumber,
-                          msp: selectedCard[0].msp,
-                          uid: selectedCard[0].uid,
-                          minKwhPerSession: selectedCard[0].minKwhPerSession,
-                          maxKwhPerSession: selectedCard[0].maxKwhPerSession,
-                          minSessionTime: selectedCard[0].minSessionTime,
-                          maxSessionTime: selectedCard[0].maxSessionTime,
-                          usageHours: selectedCard[0].usageHours,
-                          minIntervalBeforeReuse: selectedCard[0].minIntervalBeforeReuse,
-                          reference: selectedCard[0].reference,
-                          times: selectedCard[0].times,
-                          daysFrom: selectedCard[0].daysFrom,
-                          daysUntil: selectedCard[0].daysUntil,
-                          isDuplicate: true
-                      );
+                            CardViewModel cardVewModel = CardViewModel(
+                                cardNumber: selectedCard[0].cardNumber,
+                                msp: selectedCard[0].msp,
+                                uid: selectedCard[0].uid,
+                                minKwhPerSession:
+                                    selectedCard[0].minKwhPerSession,
+                                maxKwhPerSession:
+                                    selectedCard[0].maxKwhPerSession,
+                                minSessionTime: selectedCard[0].minSessionTime,
+                                maxSessionTime: selectedCard[0].maxSessionTime,
+                                usageHours: selectedCard[0].usageHours,
+                                minIntervalBeforeReuse:
+                                    selectedCard[0].minIntervalBeforeReuse,
+                                reference: selectedCard[0].reference,
+                                times: selectedCard[0].times,
+                                daysFrom: selectedCard[0].daysFrom,
+                                daysUntil: selectedCard[0].daysUntil,
+                                isDuplicate: true);
 
-                      CardDialog.show(
-                          context,
-                          _onCardAdded,
-                          cardViewModel: cardVewModel
-                      );
-                    }
-                  }
+                            CardDialog.show(context, _onCardAdded,
+                                cardViewModel: cardVewModel);
+                          }
+                        }),
+              SizedBox(
+                width: 12,
               ),
-              SizedBox(width: 12,),
-              Button(child: Text("Edit"),
-                  onPressed: selectedCard.length != 1 ? null : (){
+              Button(
+                  child: Text("Edit"),
+                  onPressed: selectedCard.length != 1
+                      ? null
+                      : () {
+                          if (selectedCard.length == 1) {
+                            CardViewModel cardViewModel = selectedCard[0];
 
-                if (selectedCard.length == 1) {
-                  CardViewModel cardViewModel =
-                  selectedCard[0];
-
-                  CardDialog.show(
-                      context,
-                      _onCardAdded,
-                      cardViewModel: cardViewModel
-                  );
-                }
-              }),
-              SizedBox(width: 12,),
+                            CardDialog.show(context, _onCardAdded,
+                                cardViewModel: cardViewModel);
+                          }
+                        }),
+              SizedBox(
+                width: 12,
+              ),
               Button(
                   style: ButtonStyle(
                     backgroundColor: ButtonState.all(Colors.red),
                   ),
-                  child: Text("Delete",
+                  child: Text(
+                    "Delete",
                     style: TextStyle(color: Colors.white),
-                  ), onPressed: ()async{
-                if (selectedCard.isNotEmpty) {
-                  var groupToDelete =
-                  List<CardViewModel>.from(selectedCard);
+                  ),
+                  onPressed: () async {
+                    if (selectedCard.isNotEmpty) {
+                      var groupToDelete =
+                          List<CardViewModel>.from(selectedCard);
 
-                  for (var group in groupToDelete) {
-                    await DatabaseHelper.instance
-                        .deleteCards(int.parse(group.id.toString()));
-                    cards.remove(group); // Remove from the main list
-                    selectedCard
-                        .remove(group); // Remove from the selected list
-                  }
+                      for (var group in groupToDelete) {
+                        await DatabaseHelper.instance
+                            .deleteCards(int.parse(group.id.toString()));
+                        cards.remove(group); // Remove from the main list
+                        selectedCard
+                            .remove(group); // Remove from the selected list
+                      }
 
-                  calculateTotalPages();
+                      calculateTotalPages();
 
-                  setState(() {
-                    // State is updated, triggering a rebuild of the widget
-                  });
-                } else {
-                  CustomInfoBar.show(context,
-                      title: "Action not allowed",
-                      content: "Please select group to delete",
-                      infoBarSeverity: InfoBarSeverity.warning);
-                }
-              }
-              ),
+                      setState(() {
+                        // State is updated, triggering a rebuild of the widget
+                      });
+                    } else {
+                      CustomInfoBar.show(context,
+                          title: "Action not allowed",
+                          content: "Please select group to delete",
+                          infoBarSeverity: InfoBarSeverity.warning);
+                    }
+                  }),
             ],
           )
         ],

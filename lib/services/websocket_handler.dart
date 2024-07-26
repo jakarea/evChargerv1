@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:ev_charger/utils/helpers.dart';
 import 'package:ev_charger/utils/internet_connection.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
@@ -8,7 +9,7 @@ import '../controllers/sharedPreference_controller.dart';
 import '../utils/log.dart';
 import 'database_helper.dart';
 
-class WebSocketHandler with ChangeNotifier{
+class WebSocketHandler with ChangeNotifier {
   static final WebSocketHandler _instance = WebSocketHandler._internal();
   factory WebSocketHandler() => _instance;
   WebSocketHandler._internal();
@@ -28,10 +29,14 @@ class WebSocketHandler with ChangeNotifier{
   bool get isSocketConnected => _socketConnected;
   bool get isBlocked => blocked;
 
-  final SharedPreferenceController sharedPreferenceController = SharedPreferenceController();
+  final SharedPreferenceController sharedPreferenceController =
+      SharedPreferenceController();
+  //final OCPPService ocppService = OCPPService();
+  //final Helpers helpers = Helpers();
 
-  Future<void>loadAcceptedChargers() async{
-    _acceptedChargerList = await sharedPreferenceController.loadAcceptedChargerList();
+  Future<void> loadAcceptedChargers() async {
+    _acceptedChargerList =
+        await sharedPreferenceController.loadAcceptedChargerList();
     Log.d("loading accepted List $_acceptedChargerList");
     notifyListeners();
   }
@@ -64,6 +69,8 @@ class WebSocketHandler with ChangeNotifier{
         }
 
         if (decodedData is List && decodedData.length >= 3) {
+          print("status check ${decodedData[2]}");
+
           if (decodedData[2] is Map &&
               decodedData[2].containsKey('transactionId')) {
             updateTransactionId(chargerId, decodedData[2]['transactionId']);
@@ -83,14 +90,18 @@ class WebSocketHandler with ChangeNotifier{
               decodedData[2].containsKey('idTagInfo') &&
               decodedData[2]['idTagInfo'] is Map &&
               decodedData[2]['idTagInfo'].containsKey('status')) {
+            debugPrint("before blocked state");
             status = decodedData[2]['idTagInfo']['status'];
             responseStatus[chargerId] = status;
+            debugPrint("before blocked status $status");
             if (responseStatus[chargerId] == 'Blocked' ||
                 responseStatus[chargerId] == 'Invalid') {
               blocked = true;
               var detectionDelay = Random().nextInt(2);
               await delayInSeconds(detectionDelay + 1);
-              //blockedChargerHandle(chargerId);
+              Helpers().blockedChargerHandle(chargerId);
+              debugPrint("inside blocked state");
+              //helpers.blockedChargerHandle(chargerId);
             } else {
               blocked = false;
             }
@@ -143,6 +154,48 @@ class WebSocketHandler with ChangeNotifier{
   Future<void> delayInSeconds(int seconds) async {
     await Future.delayed(Duration(seconds: seconds));
   }
+
+  // Future<void> blockedChargerHandle(int chargerId) async {
+  //   Map<String, dynamic>? cardData =
+  //       await DatabaseHelper.instance.getCardByChargerId(chargerId);
+  //   CardViewModel card = CardViewModel.fromJson(cardData!);
+
+  //   // for charger
+  //   Map<String, dynamic>? chargerData =
+  //       await DatabaseHelper.instance.getChargerById(chargerId);
+  //   ChargersViewModel charger = ChargersViewModel.fromJson(chargerData!);
+  //   // TODO: and send mail to admin
+  //   var uid = card.uid;
+  //   var chargeBoxNumber = charger.chargeBoxSerialNumber;
+  //   var cardNumber = card.cardNumber;
+  //   var msp = card.msp;
+
+  //   /**updating charger status*/
+  //   await DatabaseHelper.instance.updateChargingStatus(chargerId, "Start", -1);
+  //   await DatabaseHelper.instance.updateCardStatus(chargerId, "0");
+
+  //   SmtpService.sendEmail(
+  //       subject: 'Card Blocked',
+  //       text: "$uid has blocked!",
+  //       headerText: "BoxSerialNumber: $chargeBoxNumber",
+  //       contentText: "MSP: $msp <br> Card Number: $cardNumber");
+
+  //   // nextSession[chargerId] = helpers.getRandomSessionRestTime(
+  //   //     numberOfCharge[chargerId],
+  //   //     numberOfChargeDays[chargerId],
+  //   //     randomTime[chargerId]);
+
+  //   // await DatabaseHelper.instance
+  //   //     .updateTimeField(card.id!, nextSession[chargerId]);
+  //   await DatabaseHelper.instance.updateChargerId(card.id!, '');
+
+  //   await ocppService.sendStatusNotification(
+  //       chargerId, "StatusNotification", "Available", "", "", "", 0, 1);
+
+  //   await ocppService.sendHeartbeat(chargerId);
+  //   sharedPreferenceController.saveChargerStatus(chargerId, 'heartbeat');
+  //   /*chargerState[chargerId] = 'heartbeat';*/
+  // }
 }
 
 class ChargerData {
