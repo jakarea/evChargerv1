@@ -11,6 +11,7 @@ import 'package:ev_charger/services/websocket_handler.dart';
 import 'package:ev_charger/utils/helpers.dart';
 import 'package:ev_charger/utils/internet_connection.dart';
 import 'package:ev_charger/utils/preferences_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -75,7 +76,8 @@ class BackgroundService {
   }
 
   BackgroundService._internal() {
-    sharedPreferenceController.cleanSharedPref();
+    // sharedPreferenceController.cleanSharedPref();
+    cleanSharedPref();
     checkInternetConnection.hasInternetConnection();
     startPeriodicTask();
     helpers.decideNextTimezoneChangerDate();
@@ -83,15 +85,22 @@ class BackgroundService {
     loadSharedPreference();
   }
 
+  Future<void> cleanSharedPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
   Future<void> loadSharedPreference() async {
-    PreferencesHelper.saveFirstBootValue("true");
+    Log.i("firstTime boot value $firstTimeBoot and ${await PreferencesHelper.loadFirstBootValue()}");
     if (await PreferencesHelper.loadFirstBootValue() == "true") {
       firstTimeBoot = true;
     }
+
     if (!firstTimeBoot) {
       helpers.updatingCardDataForFirstTimeBoot();
     }
-    Log.i("firstTime boot value $firstTimeBoot");
+    PreferencesHelper.saveFirstBootValue("true");
+
     _chargerStatuses =
         await sharedPreferenceController.loadAllChargerStatuses();
     Log.i("all charger states $_chargerStatuses");

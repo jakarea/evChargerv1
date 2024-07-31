@@ -17,16 +17,25 @@ class Helpers {
     var allCards = await DatabaseHelper.instance.getCards();
     var random = Random();
 
-    allCards.forEach((card) async {
-      // Generate a random duration between 1 to 5 hours (in seconds)
-      int randomHours = random.nextInt(8) + 3;
+    int lastCardTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    for (var i = 0; i < allCards.length; i++) {
+      var card = allCards[i];
+
+      // Generate a random duration between 1 to 3 hours (in seconds)
+      int randomHours = random.nextInt(3) + 1;
       int randomTimeInSeconds = randomHours * 3600;
 
-      int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      int randomUnixTime = currentTime + randomTimeInSeconds;
+      // Generate a random delay between 20 to 45 minutes (in seconds)
+      int randomMinutes = random.nextInt(26) + 20;
+      int randomDelayInSeconds = randomMinutes * 60;
+
+      // Ensure this card starts at least the random delay after the last card
+      int randomUnixTime = lastCardTime + randomTimeInSeconds;
+      lastCardTime = randomUnixTime + randomDelayInSeconds; // Update lastCardTime for the next iteration
 
       await DatabaseHelper.instance.updateTimeField(card['id'], randomUnixTime);
-    });
+    }
     Log.v("updated card data");
   }
 
