@@ -91,6 +91,7 @@ class Helpers {
     if (lastSession < 12000) {
       lastSession = 12000;
     }
+    int lastCardTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     int totalTime = 86400 * days;
     int averageUse = totalTime ~/ numberOfSession;
@@ -110,7 +111,16 @@ class Helpers {
     if (86400 < nextSession && nextSession < 90000) {
       nextSession = nextSession + 5000;
     }
-    return nextSession + now.millisecondsSinceEpoch ~/ 1000;
+
+    // Generate a random delay between 20 to 45 minutes (in seconds)
+    int randomMinutes = random.nextInt(26) + 20;
+    int randomDelayInSeconds = randomMinutes * 60;
+
+    int randomUnixTime = lastCardTime + nextSession;
+    lastCardTime = randomUnixTime + randomDelayInSeconds;
+
+    return randomUnixTime;
+/*    return randomUnixTime + now.millisecondsSinceEpoch ~/ 1000;*/
   }
 
   Future<void> delayInSeconds(int seconds) async {
